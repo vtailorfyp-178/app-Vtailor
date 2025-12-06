@@ -1,13 +1,12 @@
-Flask==2.0.3
-fastapi==0.68.1
-uvicorn==0.15.0
-pydantic==1.8.2
-motor==2.5.1
-python-jose==3.3.0
-bcrypt==3.2.0
-requests==2.26.0
-pytest==6.2.5
-pytest-asyncio==0.15.1
-pymongo==3.12.1
-python-dotenv==0.19.2
-websockets==10.1
+fastapi>=0.68.0
+uvicorn[standard]>=0.15.0
+pydantic>=1.8.2
+pymongo>=3.12.1
+PyJWT>=2.0.0
+bcrypt>=3.2.0
+stytch>=1.0.0
+python-dotenv>=0.19.2
+python-multipart>=0.0.5
+# Dev / testing
+pytest>=6.2.5
+pytest-asyncio>=0.15.1

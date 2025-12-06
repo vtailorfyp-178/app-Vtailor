@@ -1,21 +1,40 @@
 FROM python:3.9-slim
 
-# Set the working directory inside the container
-WORKDIR /docker_app
+# Do not write pyc files and ensure stdout/stderr is unbuffered
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
-# Copy the requirements file
-COPY requirements.txt .
+# Install build dependencies required by some packages (bcrypt, cryptography, etc.)
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends \
+	   build-essential \
+	   libffi-dev \
+	   libssl-dev \
+	&& rm -rf /var/lib/apt/lists/*
 
-# Install the dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Set working directory
+WORKDIR /app
 
-# Copy the application code into WORKDIR (/docker_app)
-COPY . .
+# Copy requirements first to leverage Docker layer cache
+COPY requirements.txt /app/
 
-# Ensure python can import packages from WORKDIR (helpful with reload subprocesses)
-ENV PYTHONPATH=/docker_app
+# Upgrade pip and install python dependencies
+RUN pip install --upgrade pip \
+	&& pip install --no-cache-dir -r /app/requirements.txt
+
+# Copy application code
+COPY . /app
+
+# Create a non-root user and give ownership of the app directory
+RUN useradd --create-home appuser \
+	&& chown -R appuser:appuser /app
+
+# Run as non-root user (good security practice). Docker Compose can override user if needed.
+USER appuser
+
+ENV PYTHONPATH=/app
 
 EXPOSE 8000
 
-# Keep the same uvicorn target if package import path is app.main:app
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Default command (no --reload here; docker-compose development overrides with --reload)
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
