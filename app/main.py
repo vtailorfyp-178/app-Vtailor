@@ -5,10 +5,18 @@ import logging
 
 logger = logging.getLogger("uvicorn.error")
 
-# Try to import real routers / websockets; fall back to minimal placeholders if missing
+# Import auth_router separately and handle properly
+try:
+    from app.api.v1.routers.auth_router import router as auth_router_instance
+    auth_router_imported = True
+except Exception as e:
+    logger.error("Failed to import auth_router: %s", e)
+    auth_router_imported = False
+    auth_router_instance = None
+
+# Try to import other routers
 try:
     from app.api.v1.routers import (
-        auth_router,
         user_router,
         tailor_router,
         admin_router,
@@ -19,12 +27,11 @@ try:
     )
 except Exception as e:
     logger.warning("Some routers failed to import: %s", e)
-    # create dummy routers to avoid import-time failures
     dummy = APIRouter()
     @dummy.get("/_placeholder")
     async def _placeholder():
         return {"ok": True}
-    auth_router = user_router = tailor_router = admin_router = order_router = chat_router = payment_router = file_router = type("R", (), {"router": dummy})()
+    user_router = tailor_router = admin_router = order_router = chat_router = payment_router = file_router = type("R", (), {"router": dummy})()
 
 try:
     from app.api.v1.websocket.chat_ws import chat_websocket
@@ -50,7 +57,6 @@ except Exception:
         await ws.send_text("call_ws placeholder")
         await ws.close()
 
-# db helpers may not exist during early development; handle gracefully
 try:
     from app.db import close_database, get_database
 except Exception:
@@ -85,9 +91,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers (only include if router attribute exists)
+# Include auth router if imported successfully
+if auth_router_imported and auth_router_instance:
+    app.include_router(auth_router_instance, prefix="/api/v1/auth", tags=["auth"])
+else:
+    logger.error("Auth router not available - authentication endpoints disabled")
+
+# Include other routers
 for r, prefix, tag in [
-    (auth_router, "/api/v1/auth", "auth"),
     (user_router, "/api/v1/users", "users"),
     (tailor_router, "/api/v1/tailors", "tailors"),
     (admin_router, "/api/v1/admin", "admin"),

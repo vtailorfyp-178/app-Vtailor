@@ -1,28 +1,39 @@
 from fastapi import APIRouter, Depends, HTTPException
-from app.schemas.auth_schema import LoginSchema, RegisterSchema
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from app.schemas.auth_schema import (
+    MagicLinkRequestSchema,
+    MagicLinkVerifySchema,
+    LogoutSchema
+)
 from app.services.auth_service import AuthService
-from app.utils.jwt_manager import create_access_token
 
 router = APIRouter()
+security = HTTPBearer()
 
-@router.post("/register")
-async def register(user: RegisterSchema):
-    user_created = await AuthService.register_user(user)
-    if not user_created:
-        raise HTTPException(status_code=400, detail="User registration failed")
-    return {"message": "User registered successfully"}
+@router.post("/request-magic-link")
+async def request_magic_link(payload: MagicLinkRequestSchema):
+    """Send magic link to email"""
+    return await AuthService.request_magic_link(payload)
 
-@router.post("/login")
-async def login(user: LoginSchema):
-    user_data = await AuthService.authenticate_user(user)
-    if not user_data:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-    access_token = create_access_token(data={"sub": user_data.email})
-    return {"access_token": access_token, "token_type": "bearer"}
+@router.post("/verify-magic-link")
+async def verify_magic_link(payload: MagicLinkVerifySchema):
+    """Verify magic link token"""
+    return await AuthService.verify_magic_link(payload)
 
-@router.post("/token/refresh")
-async def refresh_token(token: str):
-    new_token = await AuthService.refresh_access_token(token)
-    if not new_token:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    return {"access_token": new_token, "token_type": "bearer"}
+@router.get("/me")
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Get current user"""
+    user = await AuthService.get_current_user(credentials.credentials)
+    return {
+        "id": str(user["_id"]),
+        "email": user["email"],
+        "full_name": user.get("full_name", ""),
+        "phone": user.get("phone", ""),
+        "role": user.get("role", "customer"),
+        "is_active": user.get("is_active", True)
+    }
+
+@router.post("/logout")
+async def logout(payload: LogoutSchema):
+    """Logout user"""
+    return await AuthService.logout(payload.session_token)

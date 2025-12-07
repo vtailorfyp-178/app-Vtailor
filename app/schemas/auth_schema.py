@@ -1,31 +1,33 @@
 from pydantic import BaseModel
 from typing import Optional
+from enum import Enum
 
-class AuthRequestSchema(BaseModel):
+class UserRole(str, Enum):
+    CUSTOMER = "customer"
+    TAILOR = "tailor"
+    ADMIN = "admin"
+
+class MagicLinkRequestSchema(BaseModel):
+    """Request passwordless magic link"""
     email: str
-    password: str
+    redirect_url: str = "http://localhost:3000/auth/verify"
 
-class AuthResponseSchema(BaseModel):
-    access_token: str
-    token_type: str
+class MagicLinkVerifySchema(BaseModel):
+    """Verify magic link token"""
+    token: str
 
-class TokenSchema(BaseModel):
-    access_token: str
-    token_type: str
-    expires_in: Optional[int] = None
-
-class RefreshTokenSchema(BaseModel):
-    refresh_token: str
-
-class AuthErrorSchema(BaseModel):
-    detail: str
-
-class LoginSchema(BaseModel):
+class UserResponseSchema(BaseModel):
+    """User info response"""
+    id: Optional[str] = None
     email: str
-    password: str
-
-# optional: other schemas
-class RegisterSchema(BaseModel):
-    email: str
-    password: str
     full_name: Optional[str] = None
+    phone: Optional[str] = None
+    role: str = "customer"
+    is_active: bool = True
+
+    class Config:
+        from_attributes = True
+
+class LogoutSchema(BaseModel):
+    """Logout request"""
+    session_token: str
