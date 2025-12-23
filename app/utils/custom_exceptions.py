@@ -27,3 +27,9 @@ class InternalServerErrorException(Exception):
     def __init__(self, message="Internal server error"):
         self.message = message
         super().__init__(self.message)
+        
+class PaymentException(Exception):
+    """Exception raised for Payment failure."""
+    def __init__(self, message="Payment Failed"):
+        self.message = message
+        super().__init__(self.message)
