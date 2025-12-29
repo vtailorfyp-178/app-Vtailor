@@ -11,3 +11,8 @@ python-multipart
 email-validator
 python-jose[cryptography]
 stytch
+pytest
+pytest-asyncio
+httpx
+mongomock
+jose

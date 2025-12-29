@@ -1,4 +1,4 @@
-from stytch import Client
+from stytch import Client       # used to interact with Stytch's user authentication services from your server-side
 from app.core.config import get_settings
 
 settings = get_settings()

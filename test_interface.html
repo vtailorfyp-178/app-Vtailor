@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VTailor Auth Testing</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #666;
+            margin-top: 30px;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-left: 4px solid #4CAF50;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button.secondary {
+            background: #2196F3;
+        }
+        button.secondary:hover {
+            background: #0b7dda;
+        }
+        button.danger {
+            background: #f44336;
+        }
+        button.danger:hover {
+            background: #da190b;
+        }
+        .response {
+            margin-top: 15px;
+            padding: 15px;
+            background: #e8f5e9;
+            border: 1px solid #4CAF50;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            display: none;
+        }
+        .error {
+            background: #ffebee;
+            border: 1px solid #f44336;
+        }
+        .token-display {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 10px;
+            border-radius: 4px;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+        .info {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 10px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 VTailor Authentication Testing Interface</h1>
+        
+        <div class="info">
+            <strong>⚡ Quick Test:</strong>
+            <button onclick="testConnection()" style="margin: 10px 0;">Test Backend Connection</button>
+            <div id="connectionStatus" style="margin-top: 10px; display:none;"></div>
+        </div>
+
+        <div class="info">
+            <strong>📋 Instructions:</strong>
+            <ol>
+                <li>First, test the backend connection above</li>
+                <li>Send a magic link to your email</li>
+                <li>Check your email and copy the token from the URL</li>
+                <li>Paste the token and verify it to get your JWT</li>
+                <li>Use the JWT to test protected endpoints</li>
+            </ol>
+        </div>
+
+        <!-- Health Check -->
+        <div class="section">
+            <h2>1️⃣ Health Check</h2>
+            <button onclick="testHealth()">Test Health Endpoint</button>
+            <div id="healthResponse" class="response"></div>
+        </div>
+
+        <!-- Send Magic Link -->
+        <div class="section">
+            <h2>2️⃣ Send Magic Link</h2>
+            <p class="info"><strong>Note:</strong> Requires valid Stytch credentials in .env file (optional)</p>
+            <label>Email Address:</label>
+            <input type="email" id="emailInput" placeholder="your@email.com" value="test@example.com">
+            <button onclick="sendMagicLink()">Send Real Magic Link (requires Stytch)</button>
+            <button class="secondary" style="margin-top: 10px;" onclick="sendTestMagicLink()">Send Test Magic Link (no Stytch needed!)</button>
+            <div id="magicLinkResponse" class="response"></div>
+        </div>
+
+        <!-- Verify Magic Link -->
+        <div class="section">
+            <h2>3️⃣ Verify Magic Link</h2>
+            <p class="info">After receiving the email, copy the token from the magic link URL and paste it here.</p>
+            <label>Stytch Token (from email link):</label>
+            <input type="text" id="stytchToken" placeholder="Paste token from email link">
+            <button onclick="verifyMagicLink()">Verify & Get JWT Token</button>
+            <div id="verifyResponse" class="response"></div>
+            <div id="jwtTokenDisplay" style="display:none">
+                <h3>Your JWT Token:</h3>
+                <div class="token-display" id="jwtToken"></div>
+            </div>
+        </div>
+
+        <!-- Get Current User Profile -->
+        <div class="section">
+            <h2>4️⃣ Get Current User Profile</h2>
+            <label>JWT Token (Bearer Token):</label>
+            <input type="text" id="bearerToken" placeholder="Paste JWT token here">
+            <button class="secondary" onclick="getCurrentUser()">Get My Profile</button>
+            <div id="profileResponse" class="response"></div>
+        </div>
+
+        <!-- Get User by ID -->
+        <div class="section">
+            <h2>5️⃣ Get User by ID</h2>
+            <label>User ID:</label>
+            <input type="text" id="userId" placeholder="User ID">
+            <label>JWT Token:</label>
+            <input type="text" id="bearerToken2" placeholder="JWT token">
+            <button class="secondary" onclick="getUserById()">Get User</button>
+            <div id="userByIdResponse" class="response"></div>
+        </div>
+
+        <!-- List All Users (Admin) -->
+        <div class="section">
+            <h2>6️⃣ List All Users (Admin Only)</h2>
+            <label>Admin JWT Token:</label>
+            <input type="text" id="adminToken" placeholder="Admin JWT token">
+            <button class="secondary" onclick="listUsers()">List Users</button>
+            <div id="listUsersResponse" class="response"></div>
+        </div>
+
+        <!-- Refresh Token -->
+        <div class="section">
+            <h2>7️⃣ Refresh JWT Token</h2>
+            <label>Current JWT Token:</label>
+            <input type="text" id="refreshTokenInput" placeholder="JWT token to refresh">
+            <button class="secondary" onclick="refreshToken()">Refresh Token</button>
+            <div id="refreshResponse" class="response"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/app/api/v1';
+
+        function showResponse(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = isError ? 'response error' : 'response';
+            element.textContent = JSON.stringify(data, null, 2);
+        }
+
+        async function testConnection() {
+            const statusDiv = document.getElementById('connectionStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = '<p>Testing connection...</p>';
+            
+            try {
+                const response = await fetch('http://localhost:8000/health', {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                statusDiv.innerHTML = `
+                    <p style="color: green; font-weight: bold;">✅ Backend Connected Successfully!</p>
+                    <p>Status: ${data.status}</p>
+                    <p>Service: ${data.service}</p>
+                `;
+            } catch (error) {
+                statusDiv.innerHTML = `
+                    <p style="color: red; font-weight: bold;">❌ Connection Failed</p>
+                    <p>Error: ${error.message}</p>
+                    <p><strong>Troubleshooting:</strong></p>
+                    <ul style="text-align: left;">
+                        <li>Make sure Docker containers are running: <code>docker-compose ps</code></li>
+                        <li>Check if backend is accessible: <code>http://localhost:8000</code></li>
+                        <li>Check Docker logs: <code>docker logs vTailor-backend</code></li>
+                        <li>Try restarting: <code>docker-compose restart web</code></li>
+                    </ul>
+                `;
+            }
+        }
+
+        async function testHealth() {
+            try {
+                const response = await fetch('http://localhost:8000/health', {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                const data = await response.json();
+                showResponse('healthResponse', data);
+            } catch (error) {
+                showResponse('healthResponse', { 
+                    error: error.message,
+                    tip: "Make sure backend is running at http://localhost:8000"
+                }, true);
+            }
+        }
+
+        async function sendMagicLink() {
+            const email = document.getElementById('emailInput').value;
+            
+            if (!email) {
+                alert('Please enter an email address');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/send-magic-link`, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    showResponse('magicLinkResponse', data, true);
+                } else {
+                    showResponse('magicLinkResponse', data);
+                }
+            } catch (error) {
+                showResponse('magicLinkResponse', { 
+                    error: error.message,
+                    tip: "Check CORS settings and backend connection"
+                }, true);
+            }
+        }
+
+        async function sendTestMagicLink() {
+            const email = document.getElementById('emailInput').value;
+            
+            if (!email) {
+                alert('Please enter an email address');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/test-magic-link`, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    showResponse('magicLinkResponse', data, true);
+                } else {
+                    // Display test token nicely
+                    const responseHtml = `
+                        <div style="margin: 10px 0;">
+                            <h4 style="color: #4CAF50;">✅ Test Magic Link Created!</h4>
+                            <p><strong>Email:</strong> ${data.email}</p>
+                            <p><strong>Status:</strong> ${data.status}</p>
+                            <p><strong>Your Test Token:</strong></p>
+                            <div style="background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 4px; word-break: break-all; font-family: monospace; font-size: 12px;">
+                                ${data.token}
+                            </div>
+                            <button onclick="copyToClipboard('${data.token}')" style="background: #2196F3; margin: 10px 0;">📋 Copy Token</button>
+                            <div style="margin-top: 15px; background: #e3f2fd; padding: 10px; border-left: 4px solid #2196F3; border-radius: 4px;">
+                                <strong>Next Steps:</strong>
+                                <ol>
+                                    <li>Token copied to clipboard automatically</li>
+                                    <li>Scroll to section "3️⃣ Verify Magic Link"</li>
+                                    <li>Paste the token in the "Stytch Token" field</li>
+                                    <li>Click "Verify & Get JWT Token"</li>
+                                    <li>You'll get a real JWT token to test protected endpoints!</li>
+                                </ol>
+                            </div>
+                        </div>
+                    `;
+                    const element = document.getElementById('magicLinkResponse');
+                    element.style.display = 'block';
+                    element.innerHTML = responseHtml;
+                    
+                    // Auto-copy token
+                    navigator.clipboard.writeText(data.token).then(() => {
+                        console.log('Token copied to clipboard');
+                    });
+                    
+                    // Auto-fill the token field
+                    document.getElementById('stytchToken').value = data.token;
+                }
+            } catch (error) {
+                showResponse('magicLinkResponse', { 
+                    error: error.message,
+                    tip: "Make sure backend is running"
+                }, true);
+            }
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Token copied to clipboard!');
+            });
+        }
+
+        async function verifyMagicLink() {
+            const token = document.getElementById('stytchToken').value;
+            
+            if (!token) {
+                alert('Please enter the Stytch token from your email');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/verify-magic-link`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ token })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    showResponse('verifyResponse', data, true);
+                } else {
+                    showResponse('verifyResponse', data);
+                    
+                    // Display JWT token
+                    if (data.access_token) {
+                        document.getElementById('jwtTokenDisplay').style.display = 'block';
+                        document.getElementById('jwtToken').textContent = data.access_token;
+                        
+                        // Auto-fill the token in other fields
+                        document.getElementById('bearerToken').value = data.access_token;
+                        document.getElementById('bearerToken2').value = data.access_token;
+                        document.getElementById('refreshTokenInput').value = data.access_token;
+                        
+                        // Save user ID
+                        if (data.user_id) {
+                            document.getElementById('userId').value = data.user_id;
+                        }
+                    }
+                }
+            } catch (error) {
+                showResponse('verifyResponse', { error: error.message }, true);
+            }
+        }
+
+        async function getCurrentUser() {
+            const token = document.getElementById('bearerToken').value;
+            
+            if (!token) {
+                alert('Please enter JWT token');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/users/me`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    showResponse('profileResponse', data, true);
+                } else {
+                    showResponse('profileResponse', data);
+                }
+            } catch (error) {
+                showResponse('profileResponse', { error: error.message }, true);
+            }
+        }
+
+        async function getUserById() {
+            const userId = document.getElementById('userId').value;
+            const token = document.getElementById('bearerToken2').value;
+            
+            if (!userId || !token) {
+                alert('Please enter both User ID and JWT token');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/users/${userId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    showResponse('userByIdResponse', data, true);
+                } else {
+                    showResponse('userByIdResponse', data);
+                }
+            } catch (error) {
+                showResponse('userByIdResponse', { error: error.message }, true);
+            }
+        }
+
+        async function listUsers() {
+            const token = document.getElementById('adminToken').value;
+            
+            if (!token) {
+                alert('Please enter Admin JWT token');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/users?skip=0&limit=10`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    showResponse('listUsersResponse', data, true);
+                } else {
+                    showResponse('listUsersResponse', data);
+                }
+            } catch (error) {
+                showResponse('listUsersResponse', { error: error.message }, true);
+            }
+        }
+
+        async function refreshToken() {
+            const token = document.getElementById('refreshTokenInput').value;
+            
+            if (!token) {
+                alert('Please enter JWT token to refresh');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/refresh-token`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ token })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    showResponse('refreshResponse', data, true);
+                } else {
+                    showResponse('refreshResponse', data);
+                }
+            } catch (error) {
+                showResponse('refreshResponse', { error: error.message }, true);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CORS Test</title>
+</head>
+<body>
+    <h1>Testing CORS...</h1>
+    <div id="result"></div>
+    <script>
+        fetch('http://localhost:8000/health')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('result').innerHTML = 
+                    '<h2 style="color: green;">✅ SUCCESS!</h2>' +
+                    '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            })
+            .catch(error => {
+                document.getElementById('result').innerHTML = 
+                    '<h2 style="color: red;">❌ FAILED</h2>' +
+                    '<pre>' + error.message + '</pre>';
+            });
+    </script>
+</body>
+</html>
