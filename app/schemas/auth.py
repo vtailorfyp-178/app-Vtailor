@@ -3,24 +3,23 @@ from typing import Optional
 from datetime import datetime
 
 
-class MagicLinkRequest(BaseModel):
-    email: EmailStr
-
-
-class MagicLinkVerifyRequest(BaseModel):
-    token: str
+"""
+Schemas for authentication. Magic link removed; using SMS OTP.
+"""
 
 
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user_id: str
-    email: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
 
 
 class UserProfile(BaseModel):
     id: Optional[str] = None
-    email: EmailStr
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
     role: str
     is_active: bool
     created_at: datetime
@@ -34,7 +33,8 @@ class UserUpdate(BaseModel):
 
 class UserResponse(BaseModel):
     id: Optional[str] = None
-    email: EmailStr
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
     role: str
     is_active: bool
     created_at: datetime
@@ -44,3 +44,19 @@ class ErrorResponse(BaseModel):
     status: str = "error"
     detail: str
     code: Optional[str] = None
+
+
+class PhoneOTPStartRequest(BaseModel):
+    phone: str  # E.164 format: "+15551234567"
+
+
+class PhoneOTPStartResponse(BaseModel):
+    status: str
+    message: str
+    method_id: str
+    phone: str
+
+
+class PhoneOTPVerifyRequest(BaseModel):
+    method_id: str
+    code: str

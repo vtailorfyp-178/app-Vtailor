@@ -4,7 +4,8 @@ from datetime import datetime
 
 
 class UserCreate(BaseModel):
-    email: EmailStr
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None  # E.164 format, e.g., "+15551234567"
     role: str = "customer"
 
 
@@ -25,6 +26,7 @@ class UserLogin(BaseModel):
 class CurrentUser(BaseModel):
     """Current authenticated user information"""
     user_id: str
-    email: EmailStr
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
     role: str
     is_active: bool

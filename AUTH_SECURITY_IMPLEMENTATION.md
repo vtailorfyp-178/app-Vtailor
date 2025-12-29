@@ -18,6 +18,8 @@ This document details the complete authentication and security implementation fo
 - **POST `/auth/send-magic-link`**: Send magic link to user email
 - **POST `/auth/verify-magic-link`**: Verify magic link and issue JWT token
 - **POST `/auth/refresh-token`**: Refresh existing JWT token
+- **POST `/auth/otp/start`**: Send SMS OTP to phone number (E.164)
+- **POST `/auth/otp/verify`**: Verify SMS OTP and issue JWT
 - Automatic user creation on first login
 - Error handling with proper HTTP status codes
 
@@ -152,7 +154,7 @@ pytest tests/test_auth_security.py::TestSecurityFunctions::test_create_access_to
 
 ### 6. **Authentication Flow**
 
-- Passwordless authentication via magic links
+- Passwordless authentication via SMS OTP (Stytch)
 - First-login user creation
 - Session management via JWT
 
@@ -175,6 +177,16 @@ POST   /app/api/v1/auth/refresh-token
        - Refresh existing token
        - Body: { "token": "jwt_token" }
        - Response: { "access_token": "...", "token_type": "bearer", ... }
+
+POST   /app/api/v1/auth/otp/start
+       - Start SMS OTP flow
+       - Body: { "phone": "+15551234567" }
+       - Response: { "status": "success", "method_id": "otpm_...", "phone": "+15551234567" }
+
+POST   /app/api/v1/auth/otp/verify
+       - Verify SMS OTP and get JWT token
+       - Body: { "method_id": "otpm_...", "code": "123456" }
+       - Response: { "access_token": "...", "token_type": "bearer", "user_id": "...", "phone": "+15551234567" }
 ```
 
 ### User Endpoints
@@ -341,6 +353,7 @@ curl -X GET "http://localhost:8000/app/api/v1/users/me" \
 - Verify STYTCH_PROJECT_ID and STYTCH_SECRET
 - Check Stytch environment setting (test vs live)
 - Review Stytch dashboard for errors
+- Ensure phone numbers use E.164 format (e.g., +15551234567)
 
 ## 📚 Additional Resources
 
@@ -351,6 +364,6 @@ curl -X GET "http://localhost:8000/app/api/v1/users/me" \
 
 ---
 
-**Last Updated**: December 25, 2025
+**Last Updated**: December 30, 2025
 **Version**: 1.0.0
-**Status**: ✅ Authentication & Security Phase Complete
+**Status**: ✅ Authentication & Security Phase Complete (Magic Link + SMS OTP)

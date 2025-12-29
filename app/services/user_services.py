@@ -10,6 +10,13 @@ async def get_user_by_email(email: str):
     return user
 
 
+async def get_user_by_phone(phone: str):
+    """Get user by phone number (E.164)."""
+    db = get_database()
+    user = await db.users.find_one({"phone": phone})
+    return user
+
+
 async def get_user_by_id(user_id: str):
     """Get user by user ID."""
     db = get_database()
@@ -20,15 +27,21 @@ async def get_user_by_id(user_id: str):
         return None
 
 
-async def create_user(email: str, role: str = "customer"):
-    """Create a new user in the database."""
+async def create_user(email: str | None = None, role: str = "customer", phone: str | None = None):
+    """
+    Create a new user in the database.
+    Either email or phone must be provided.
+    """
     db = get_database()
     user_data = {
         "email": email,
+        "phone": phone,
         "role": role,
         "is_active": True,
         "created_at": datetime.utcnow()
     }
+    # Remove None fields to avoid storing them
+    user_data = {k: v for k, v in user_data.items() if v is not None}
     result = await db.users.insert_one(user_data)
     user_data["_id"] = result.inserted_id
     return user_data
