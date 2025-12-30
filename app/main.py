@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware # allow frontend to make requests to backend APIs hosted on different origin without blocking
-from fastapi.middleware.trustedhost import TrustedHostMiddleware  #for security, to ensure requstes sent to trusted hosts only
 from app.core.config import get_settings
 from app.db.mongodb import connect_to_mongo, close_mongo_connection, check_mongo_connection
 from app.api.api import api_router
@@ -22,12 +21,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Security middleware - Trust only specific hosts (commented out for local file:// testing)
-# Uncomment this in production with proper host configuration
-# app.add_middleware(
-#     TrustedHostMiddleware,
-#     allowed_hosts=["localhost", "127.0.0.1", "*.localhost"]
-# )
 
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
