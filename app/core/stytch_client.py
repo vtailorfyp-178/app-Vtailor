@@ -1,25 +1,10 @@
-from stytch import Client
+from stytch import Client       # used to interact with Stytch's user authentication services from your server-side
+from app.core.config import get_settings
 
-class StytchClient:
-    def __init__(self, project_id: str, secret: str):
-        self.client = Client(project_id=project_id, secret=secret)
+settings = get_settings()
 
-    def authenticate_user(self, email: str):
-        response = self.client.magic_links.create(email=email)
-        return response
-
-    def verify_token(self, token: str):
-        response = self.client.magic_links.authenticate(token=token)
-        return response
-
-    def get_user(self, user_id: str):
-        response = self.client.users.get(user_id=user_id)
-        return response
-
-    def update_user(self, user_id: str, data: dict):
-        response = self.client.users.update(user_id=user_id, data=data)
-        return response
-
-    def delete_user(self, user_id: str):
-        response = self.client.users.delete(user_id=user_id)
-        return response
+stytch_client = Client(
+    project_id=settings.STYTCH_PROJECT_ID,
+    secret=settings.STYTCH_SECRET,
+    environment="test",  # change to "live" later
+)

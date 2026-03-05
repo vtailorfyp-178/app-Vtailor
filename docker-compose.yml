@@ -1,38 +1,25 @@
+
 services:
   web:
-    build:
-      context: .
+    build: .
+    container_name: vTailor-backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    volumes:
+      - .:/app
     ports:
       - "8000:8000"
-    # Mount project into the same WORKDIR used in Dockerfile for local development
-    volumes:
-      - ./:/app
-    environment:
-      ENV: development
-      MONGODB_URL: mongodb://db:27017
-      MONGODB_DB_NAME: vtailor_db
-      PYTHONPATH: /app
+    env_file:
+      - .env
     depends_on:
-      - db
-    # Development command (overrides default CMD in Dockerfile)
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    restart: unless-stopped
+      - mongo
 
-  db:
-    image: mongo:5.0
+  mongo:
+    image: mongo:latest
+    container_name: vtailor-mongo
     ports:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: password
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
 volumes:
   mongo_data:

@@ -34,7 +34,8 @@ USER appuser
 
 ENV PYTHONPATH=/app
 
+#Expose port 8000 to allow communication to/from the container
 EXPOSE 8000
 
-# Default command (no --reload here; docker-compose development overrides with --reload)
+#Command to run the application using Uvicorn ASGI server
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
