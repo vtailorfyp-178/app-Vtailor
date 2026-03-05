@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status, Depends
-from app.dependencies.auth import get_current_active_user, require_role, get_current_user
+from app.api.v1.dependencies.auth import get_current_active_user, require_role, get_current_user
 from app.schemas.auth import UserProfile, UserUpdate, UserResponse, ErrorResponse
 from app.services.user_services import (
     get_user_by_id,
