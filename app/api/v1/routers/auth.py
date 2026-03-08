@@ -84,10 +84,21 @@ async def otp_start(data: EmailOTPStartRequest):
         # login_or_create = works for both new and existing Stytch users
         resp = stytch_client.otps.email.login_or_create(email=data.email)
 
+        # Debug: print all attributes to find correct method_id field
+        print("STYTCH RESPONSE ATTRS:", vars(resp))
+
+        # Try all possible attribute names
+        method_id = (
+            getattr(resp, "method_id", None)
+            or getattr(resp, "email_id", None)
+            or getattr(resp, "user_id", None)
+        )
+        print("USING METHOD_ID:", method_id)
+
         return EmailOTPStartResponse(
             status="success",
             message=f"OTP sent to {data.email}",
-            method_id=resp.method_id,  # Frontend MUST store this for verify step
+            method_id=method_id,  # Frontend MUST store this for verify step
             email=data.email,
         )
 
