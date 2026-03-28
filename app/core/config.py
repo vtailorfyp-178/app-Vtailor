@@ -17,6 +17,20 @@ class Settings(BaseSettings):
     STYTCH_PROJECT_ID: str                          # Stytch for authentication having passwordless options
     STYTCH_SECRET: str
 
+    # Wallet gateway integration (JazzCash / EasyPaisa)
+    WALLET_CALLBACK_BASE_URL: str = "http://localhost:8000"
+    JAZZCASH_MERCHANT_ID: str | None = None
+    JAZZCASH_API_KEY: str | None = None
+    JAZZCASH_API_URL: str | None = None
+    JAZZCASH_VERIFY_API_URL: str | None = None
+    JAZZCASH_PAYOUT_API_URL: str | None = None
+    EASYPAISA_MERCHANT_ID: str | None = None
+    EASYPAISA_API_KEY: str | None = None
+    EASYPAISA_API_URL: str | None = None
+    EASYPAISA_VERIFY_API_URL: str | None = None
+    EASYPAISA_PAYOUT_API_URL: str | None = None
+    WALLET_GATEWAY_SIMULATION: bool = True
+
     model_config = ConfigDict(
         env_file=".env",
         extra="ignore",
