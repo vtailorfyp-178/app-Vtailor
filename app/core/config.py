@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     STYTCH_PROJECT_ID: str                          # Stytch for authentication having passwordless options
     STYTCH_SECRET: str
 
+    OPENAI_API_KEY: str | None = None
+    OPENAI_MODEL: str = "gpt-4o-mini"
+
     # Wallet gateway integration (JazzCash / EasyPaisa)
     WALLET_CALLBACK_BASE_URL: str = "http://localhost:8000"
     JAZZCASH_MERCHANT_ID: str | None = None

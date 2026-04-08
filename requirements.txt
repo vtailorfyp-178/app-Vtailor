@@ -11,6 +11,7 @@ python-multipart
 email-validator
 python-jose[cryptography]
 stytch
+openai
 pytest
 pytest-asyncio
 httpx
