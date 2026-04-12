@@ -17,3 +17,5 @@ pytest-asyncio
 httpx
 mongomock
 jose
+boto3
+aiosmtplib

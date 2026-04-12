@@ -6,7 +6,7 @@ from app.schemas.wallet import (
     WalletTransactionRequest,
     WalletTransactionResponse,
 )
-from app.services.wallet_services import apply_wallet_transaction, get_wallet_summary
+from app.services.wallet_services import apply_wallet_transaction, fail_wallet_transaction, get_wallet_summary
 from app.services.wallet_services import confirm_wallet_transaction
 
 
@@ -74,6 +74,29 @@ async def confirm_transaction(
     return WalletTransactionResponse(
         status="success",
         message="Transaction confirmed",
+        wallet=summary,
+        transaction=tx,
+    )
+
+
+@router.post("/transactions/{transaction_id}/fail", response_model=WalletTransactionResponse)
+async def fail_transaction(
+    transaction_id: str,
+    payload: dict | None = None,
+    current_user: dict = Depends(get_current_user),
+):
+    user_id = str(current_user.get("_id"))
+    reason = None if payload is None else payload.get("reason")
+
+    try:
+        wallet, tx = await fail_wallet_transaction(user_id=user_id, transaction_id=transaction_id, reason=reason)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    summary = await get_wallet_summary(user_id=user_id, limit=20)
+    return WalletTransactionResponse(
+        status="failed",
+        message=reason or "Transaction failed",
         wallet=summary,
         transaction=tx,
     )

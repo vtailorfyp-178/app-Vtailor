@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     EASYPAISA_PAYOUT_API_URL: str | None = None
     WALLET_GATEWAY_SIMULATION: bool = True
 
+    # AWS S3 for conversation media storage
+    AWS_REGION: str = "us-east-1"
+    AWS_ACCESS_KEY_ID: str | None = None
+    AWS_SECRET_ACCESS_KEY: str | None = None
+    S3_BUCKET: str = "tailor-app-media"
+
     model_config = ConfigDict(
         env_file=".env",
         extra="ignore",

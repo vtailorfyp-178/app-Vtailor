@@ -120,20 +120,24 @@ async def apply_wallet_transaction(
         insert_result = await db.wallet_transactions.insert_one(pending_doc)
         pending_doc["_id"] = insert_result.inserted_id
 
-        if transaction_type == "add":
-            gateway_data = await initiate_collection_payment(
-                provider=method_normalized,
-                amount=float(amount),
-                phone=phone,
-                internal_tx_id=str(insert_result.inserted_id),
-            )
-        else:
-            gateway_data = await initiate_payout(
-                provider=method_normalized,
-                amount=float(amount),
-                phone=phone,
-                internal_tx_id=str(insert_result.inserted_id),
-            )
+        try:
+            if transaction_type == "add":
+                gateway_data = await initiate_collection_payment(
+                    provider=method_normalized,
+                    amount=float(amount),
+                    phone=phone,
+                    internal_tx_id=str(insert_result.inserted_id),
+                )
+            else:
+                gateway_data = await initiate_payout(
+                    provider=method_normalized,
+                    amount=float(amount),
+                    phone=phone,
+                    internal_tx_id=str(insert_result.inserted_id),
+                )
+        except Exception:
+            await db.wallet_transactions.delete_one({"_id": insert_result.inserted_id})
+            raise
 
         await db.wallet_transactions.update_one(
             {"_id": insert_result.inserted_id},
@@ -235,6 +239,42 @@ async def confirm_wallet_transaction(user_id: str, transaction_id: str) -> tuple
 
     wallet["balance"] = next_balance
     wallet["updated_at"] = now
+
+    updated_tx = await db.wallet_transactions.find_one({"_id": tx_obj_id})
+    return wallet, _serialize_transaction(updated_tx or tx)
+
+
+async def fail_wallet_transaction(user_id: str, transaction_id: str, reason: str | None = None) -> tuple[dict, dict]:
+    db = get_database()
+    wallet = await get_or_create_wallet(user_id)
+    obj_user_id = ObjectId(user_id)
+
+    try:
+        tx_obj_id = ObjectId(transaction_id)
+    except Exception:
+        raise ValueError("Invalid transaction id")
+
+    tx = await db.wallet_transactions.find_one({"_id": tx_obj_id, "user_id": obj_user_id})
+    if not tx:
+        raise ValueError("Transaction not found")
+
+    if tx.get("status") == "failed":
+        return wallet, _serialize_transaction(tx)
+
+    if tx.get("status") != "pending":
+        raise ValueError("Only pending transactions can be failed")
+
+    now = datetime.utcnow()
+    await db.wallet_transactions.update_one(
+        {"_id": tx_obj_id},
+        {
+            "$set": {
+                "status": "failed",
+                "failed_at": now,
+                "failure_reason": reason or "Payment was not completed",
+            }
+        },
+    )
 
     updated_tx = await db.wallet_transactions.find_one({"_id": tx_obj_id})
     return wallet, _serialize_transaction(updated_tx or tx)

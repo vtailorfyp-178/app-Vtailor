@@ -16,6 +16,7 @@ from app.services.user_services import (
     get_user_by_email,
     create_user,
     get_user_by_id,
+    user_to_profile,
 )
 
 # ─────────────────────────────────────────────
@@ -155,15 +156,22 @@ async def otp_verify(data: EmailOTPVerifyRequest):
                 detail="Could not extract email from Stytch user.",
             )
 
-        # Look up user in OUR MongoDB
-        mongo_user = await get_user_by_email(email)
+        requested_role = (data.role or "customer").strip().lower()
+        if requested_role not in {"customer", "tailor"}:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid role. Allowed roles are 'customer' and 'tailor'.",
+            )
 
-        # First-time user: create their record in MongoDB
+        # Look up user in OUR MongoDB by email + role
+        mongo_user = await get_user_by_email(email, requested_role)
+
+        # First-time user for this role: create their record in MongoDB
         if mongo_user is None:
             mongo_user = await create_user(
                 email=email,
                 phone=None,
-                role="customer",
+                role=requested_role,
             )
 
         # Convert MongoDB _id (ObjectId) to plain string
@@ -181,6 +189,7 @@ async def otp_verify(data: EmailOTPVerifyRequest):
         return TokenResponse(
             access_token=access_token,
             user_id=mongo_user_id,
+            role=mongo_user.get("role", requested_role),
             email=mongo_user.get("email"),
             phone=mongo_user.get("phone"),
             token_type="bearer",
@@ -238,6 +247,7 @@ async def refresh_token(data: RefreshTokenRequest):
     return TokenResponse(
         access_token=new_token,
         user_id=str(user.get("_id")),
+        role=user.get("role", "customer"),
         email=user.get("email"),
         phone=user.get("phone"),
         token_type="bearer",
@@ -266,11 +276,4 @@ async def get_me(current_user: dict = Depends(get_current_user)):
     Returns the profile of the currently authenticated user.
     Requires: `Authorization: Bearer <your_jwt_token>` header.
     """
-    return UserProfile(
-        user_id=str(current_user.get("_id")),
-        email=current_user.get("email"),
-        phone=current_user.get("phone"),
-        role=current_user.get("role", "customer"),
-        is_active=current_user.get("is_active", True),
-        created_at=current_user.get("created_at"),
-    )
+    return UserProfile(**user_to_profile(current_user))

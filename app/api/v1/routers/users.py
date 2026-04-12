@@ -7,6 +7,7 @@ from app.services.user_services import (
     update_user,
     delete_user,
     list_all_users,
+    user_to_profile,
 )
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -77,14 +78,7 @@ async def get_current_user_profile(
     Get the profile of the currently authenticated user.
     Requires: Authorization: Bearer <token>
     """
-    return UserProfile(
-        user_id=str(current_user.get("_id")),
-        email=current_user.get("email"),
-        phone=current_user.get("phone"),
-        role=current_user.get("role", "customer"),
-        is_active=current_user.get("is_active", True),
-        created_at=current_user.get("created_at"),
-    )
+    return UserProfile(**user_to_profile(current_user))
 
 
 # ─────────────────────────────────────────────
@@ -124,14 +118,7 @@ async def get_user_profile(
             detail="User not found.",
         )
 
-    return UserProfile(
-        user_id=str(user.get("_id")),
-        email=user.get("email"),
-        phone=user.get("phone"),
-        role=user.get("role", "customer"),
-        is_active=user.get("is_active", True),
-        created_at=user.get("created_at"),
-    )
+    return UserProfile(**user_to_profile(user))
 
 
 # ─────────────────────────────────────────────
@@ -169,6 +156,20 @@ async def update_user_profile(
     update_dict = {}
     if update_data.email is not None:
         update_dict["email"] = update_data.email
+    if update_data.name is not None:
+        update_dict["name"] = update_data.name
+    if update_data.phone is not None:
+        update_dict["phone"] = update_data.phone
+    if update_data.address is not None:
+        update_dict["address"] = update_data.address
+    if update_data.experience is not None:
+        update_dict["experience"] = update_data.experience
+    if update_data.specialization is not None:
+        update_dict["specialization"] = update_data.specialization
+    if update_data.description is not None:
+        update_dict["description"] = update_data.description
+    if update_data.avatar is not None:
+        update_dict["avatar"] = update_data.avatar
     if update_data.is_active is not None:
         update_dict["is_active"] = update_data.is_active
 
@@ -194,14 +195,7 @@ async def update_user_profile(
             detail="User not found.",
         )
 
-    return UserProfile(
-        user_id=str(user.get("_id")),
-        email=user.get("email"),
-        phone=user.get("phone"),
-        role=user.get("role", "customer"),
-        is_active=user.get("is_active", True),
-        created_at=user.get("created_at"),
-    )
+    return UserProfile(**user_to_profile(user))
 
 
 # ─────────────────────────────────────────────

@@ -3,10 +3,13 @@ from datetime import datetime
 from bson import ObjectId
 
 
-async def get_user_by_email(email: str):
-    """Get user by email address."""
+async def get_user_by_email(email: str, role: str | None = None):
+    """Get user by email address, optionally scoped to a role."""
     db = get_database()
-    user = await db.users.find_one({"email": email})
+    query = {"email": email}
+    if role:
+        query["role"] = role
+    user = await db.users.find_one(query)
     return user
 
 
@@ -60,6 +63,25 @@ async def update_user(user_id: str, update_data: dict):
         return await get_user_by_id(user_id)
     except:
         return None
+
+
+def user_to_profile(user: dict | None):
+    if not user:
+        return None
+    return {
+        "user_id": str(user.get("_id")),
+        "email": user.get("email"),
+        "phone": user.get("phone"),
+        "name": user.get("name"),
+        "address": user.get("address"),
+        "experience": user.get("experience"),
+        "specialization": user.get("specialization"),
+        "description": user.get("description"),
+        "avatar": user.get("avatar"),
+        "role": user.get("role", "customer"),
+        "is_active": user.get("is_active", True),
+        "created_at": user.get("created_at"),
+    }
 
 
 async def delete_user(user_id: str):
