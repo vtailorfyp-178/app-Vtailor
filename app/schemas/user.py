@@ -1,6 +1,7 @@
-from pydantic import EmailStr
-from typing import Optional, List
-from pydantic import BaseModel
+from datetime import datetime
+from typing import List, Optional
+
+from pydantic import BaseModel, EmailStr
 
 
 class UserUpdate(BaseModel):
@@ -31,3 +32,42 @@ class UserUpdate(BaseModel):
                 "is_active": True
             }
         }
+
+
+class TailorLocationPoint(BaseModel):
+    latitude: float
+    longitude: float
+
+
+class TailorAvailabilityUpdate(BaseModel):
+    is_available: bool
+
+
+class TailorLocationUpdate(BaseModel):
+    latitude: float
+    longitude: float
+    is_available: Optional[bool] = None
+
+
+class NearbyTailor(BaseModel):
+    user_id: str
+    name: Optional[str] = None
+    avatar: Optional[str] = None
+    specialization: List[str] = []
+    experience: Optional[str] = None
+    rating: float
+    review_count: int
+    price_from: int
+    price_to: int
+    is_available: bool
+    location: TailorLocationPoint
+    distance_km: float
+    last_location_at: Optional[datetime] = None
+
+
+class NearbyTailorsResponse(BaseModel):
+    latitude: float
+    longitude: float
+    radius_km: float
+    count: int
+    results: List[NearbyTailor]

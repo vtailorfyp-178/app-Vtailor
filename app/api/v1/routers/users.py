@@ -1,13 +1,21 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Query
 from app.api.v1.routers.auth import get_current_user   # Single source of truth for auth
 from app.schemas.auth import UserProfile, ErrorResponse
-from app.schemas.user import UserUpdate                 # Update request schema (see below)
+from app.schemas.user import (
+    UserUpdate,
+    TailorAvailabilityUpdate,
+    TailorLocationUpdate,
+    NearbyTailorsResponse,
+)                 # Update request schema (see below)
 from app.services.user_services import (
     get_user_by_id,
     update_user,
     delete_user,
     list_all_users,
     user_to_profile,
+    get_nearby_tailors,
+    update_tailor_availability,
+    update_tailor_location,
 )
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -79,6 +87,119 @@ async def get_current_user_profile(
     Requires: Authorization: Bearer <token>
     """
     return UserProfile(**user_to_profile(current_user))
+
+
+@router.get(
+    "/tailors/nearby",
+    response_model=NearbyTailorsResponse,
+    summary="Find nearby tailors with filters and sorting",
+)
+async def get_nearby_tailors_api(
+    latitude: float = Query(...),
+    longitude: float = Query(...),
+    radius_km: float = Query(10.0, ge=0.5, le=100),
+    specialty: str | None = Query(None),
+    price_min: int | None = Query(None, ge=0),
+    price_max: int | None = Query(None, ge=0),
+    min_rating: float | None = Query(None, ge=0, le=5),
+    availability: bool | None = Query(None),
+    query_text: str | None = Query(None, alias="q"),
+    sort_by: str = Query("distance", pattern="^(distance|rating|reviews)$"),
+    limit: int = Query(50, ge=1, le=200),
+    current_user: dict = Depends(get_current_active_user),
+):
+    """
+    Returns tailors inside radius_km from supplied latitude/longitude.
+    Supports filtering by specialty, price, rating, availability and text search.
+    """
+    tailors = await get_nearby_tailors(
+        latitude=latitude,
+        longitude=longitude,
+        radius_km=radius_km,
+        specialty=specialty,
+        price_min=price_min,
+        price_max=price_max,
+        min_rating=min_rating,
+        availability=availability,
+        query_text=query_text,
+        sort_by=sort_by,
+        limit=limit,
+    )
+    return {
+        "latitude": latitude,
+        "longitude": longitude,
+        "radius_km": radius_km,
+        "count": len(tailors),
+        "results": tailors,
+    }
+
+
+@router.post(
+    "/tailors/location",
+    summary="Update tailor current GPS location",
+)
+async def update_tailor_location_api(
+    payload: TailorLocationUpdate,
+    current_user: dict = Depends(get_current_active_user),
+):
+    if current_user.get("role") != "tailor":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only tailor accounts can update location.",
+        )
+
+    updated = await update_tailor_location(
+        user_id=str(current_user.get("_id")),
+        latitude=payload.latitude,
+        longitude=payload.longitude,
+        is_available=payload.is_available,
+    )
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tailor account not found.",
+        )
+
+    return {
+        "status": "success",
+        "is_available": bool(updated.get("is_available", False)),
+        "location": {
+            "latitude": updated.get("latitude"),
+            "longitude": updated.get("longitude"),
+        },
+        "last_location_at": updated.get("last_location_at"),
+    }
+
+
+@router.post(
+    "/tailors/availability",
+    summary="Set tailor open/closed status",
+)
+async def update_tailor_availability_api(
+    payload: TailorAvailabilityUpdate,
+    current_user: dict = Depends(get_current_active_user),
+):
+    if current_user.get("role") != "tailor":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only tailor accounts can change availability.",
+        )
+
+    updated = await update_tailor_availability(
+        user_id=str(current_user.get("_id")),
+        is_available=payload.is_available,
+    )
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tailor account not found.",
+        )
+
+    return {
+        "status": "success",
+        "is_available": bool(updated.get("is_available", False)),
+        "availability_updated_at": updated.get("availability_updated_at"),
+    }
 
 
 # ─────────────────────────────────────────────

@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
@@ -26,6 +28,17 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 # HTTPBearer extracts the JWT from "Authorization: Bearer <token>" header
 bearer_scheme = HTTPBearer()
+STYTCH_TIMEOUT_SECONDS = 20
+
+
+async def _run_stytch_call(func, *args, **kwargs):
+    try:
+        return await asyncio.wait_for(asyncio.to_thread(func, *args, **kwargs), timeout=STYTCH_TIMEOUT_SECONDS)
+    except asyncio.TimeoutError:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="Authentication service timed out. Please try again.",
+        )
 
 
 # ─────────────────────────────────────────────
@@ -81,20 +94,14 @@ async def otp_start(data: EmailOTPStartRequest):
     - **email**: Valid email address e.g. `user@example.com`
     """
     try:
-        # Ask Stytch to send OTP to the email
-        # login_or_create = works for both new and existing Stytch users
-        resp = stytch_client.otps.email.login_or_create(email=data.email)
+        # Ask Stytch to send OTP to the email without blocking the event loop.
+        resp = await _run_stytch_call(stytch_client.otps.email.login_or_create, email=data.email)
 
-        # Debug: print all attributes to find correct method_id field
-        print("STYTCH RESPONSE ATTRS:", vars(resp))
-
-        # Try all possible attribute names
         method_id = (
             getattr(resp, "method_id", None)
             or getattr(resp, "email_id", None)
             or getattr(resp, "user_id", None)
         )
-        print("USING METHOD_ID:", method_id)
 
         return EmailOTPStartResponse(
             status="success",
@@ -103,6 +110,8 @@ async def otp_start(data: EmailOTPStartRequest):
             email=data.email,
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -137,8 +146,9 @@ async def otp_verify(data: EmailOTPVerifyRequest):
     - **code**: 6-digit OTP received via email
     """
     try:
-        # Send method_id + OTP code to Stytch for verification
-        resp = stytch_client.otps.authenticate(
+        # Send method_id + OTP code to Stytch without blocking the event loop.
+        resp = await _run_stytch_call(
+            stytch_client.otps.authenticate,
             method_id=data.method_id,
             code=data.code,
             session_duration_minutes=60,

@@ -5,6 +5,7 @@ from app.core.config import get_settings
 from app.db.mongodb import connect_to_mongo, close_mongo_connection, check_mongo_connection
 from app.api.api import api_router
 from app.api.v1.routers.conversation import create_conversation_router
+from app.api.v1.routers.tailor_map import create_tailor_map_router, ensure_tailor_map_indexes
 from app.db.mongodb import get_database
 
 settings = get_settings()
@@ -58,15 +59,22 @@ async def startup():
     from app.conversation.service import ConversationService
     conv_svc = ConversationService(db)
     await conv_svc.ensure_indexes()
+    await ensure_tailor_map_indexes(db)
     conv_router = create_conversation_router(
         db=db,
         s3_client=s3_client,
         bucket=settings.S3_BUCKET,
     )
+    tailor_router = create_tailor_map_router(db)
     app.include_router(
         conv_router,
         prefix="/app/api/v1/conversations",
         tags=["Conversations"],
+    )
+    app.include_router(
+        tailor_router,
+        prefix="/app/api/v1/tailors",
+        tags=["Tailor Map"],
     )
 
 
