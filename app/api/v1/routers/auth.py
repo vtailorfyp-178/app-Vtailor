@@ -208,9 +208,21 @@ async def otp_verify(data: EmailOTPVerifyRequest):
     except HTTPException:
         raise
     except Exception as e:
+        error_text = str(e)
+        lowered_error = error_text.lower()
+        if (
+            "otp_code_not_found" in lowered_error
+            or "passcode was incorrect" in lowered_error
+            or "could not be authenticated" in lowered_error
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="The OTP code is incorrect or expired. Please enter the latest code or request a new OTP.",
+            )
+
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"OTP verification failed: {str(e)}",
+            detail="Unable to verify OTP right now. Please request a new OTP and try again.",
         )
 
 

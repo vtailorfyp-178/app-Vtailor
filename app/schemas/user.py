@@ -52,6 +52,11 @@ class TailorLocationUpdate(BaseModel):
 class NearbyTailor(BaseModel):
     user_id: str
     name: Optional[str] = None
+    shop_name: Optional[str] = None
+    address: Optional[str] = None
+    bio: Optional[str] = None
+    working_hours: Optional[str] = None
+    phone: Optional[str] = None
     avatar: Optional[str] = None
     specialization: List[str] = []
     experience: Optional[str] = None

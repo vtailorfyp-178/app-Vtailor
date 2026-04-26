@@ -35,12 +35,12 @@ s3_client = None
 @app.on_event("startup")
 async def startup():
     global s3_client
-    print("🚀 Starting VTailor Backend...")
+    print("Starting VTailor Backend...")
     await connect_to_mongo()
     if await check_mongo_connection():
-        print("✅ MongoDB connected")
+        print("MongoDB connected")
     else:
-        print("❌ MongoDB connection failed")
+        print("MongoDB connection failed")
 
     # Initialize S3 client
     try:
@@ -50,9 +50,9 @@ async def startup():
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
         )
-        print(f"✅ S3 client initialized: bucket={settings.S3_BUCKET}")
+        print(f"S3 client initialized: bucket={settings.S3_BUCKET}")
     except Exception as e:
-        print(f"⚠️  S3 initialization failed: {e}")
+        print(f"S3 initialization failed: {e}")
 
     # Mount conversation router
     db = get_database()
@@ -81,7 +81,7 @@ async def startup():
 @app.on_event("shutdown")
 async def shutdown():
     await close_mongo_connection()
-    print("🛑 Application shutdown")
+    print("Application shutdown")
 
 
 @app.get("/")

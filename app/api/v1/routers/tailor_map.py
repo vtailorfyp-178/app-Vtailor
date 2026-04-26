@@ -12,6 +12,104 @@ log = logging.getLogger(__name__)
 
 COL_TAILOR_PROFILES = "tailor_profiles"
 
+SAMPLE_TAILORS = [
+    {
+        "tailor_id": "sample-tailor-zainab-bridal",
+        "name": "Zainab Bridal Couture",
+        "shop_name": "Zainab Bridal Couture",
+        "bio": "Premium female formal dresses, lehengas, and detailed hand embroidery.",
+        "address": "Shop 14, Liberty Market, Gulberg III, Lahore, Pakistan",
+        "specialties": ["Formal", "Traditional"],
+        "price_range": "premium",
+        "phone": "+92 300 4102231",
+        "avatar_url": None,
+        "cover_url": None,
+        "working_hours": "Mon-Sat, 11:00 AM - 8:00 PM",
+        "rating": 4.8,
+        "review_count": 186,
+        "is_available": True,
+        "is_verified": True,
+        "latitude": 31.5098,
+        "longitude": 74.3441,
+    },
+    {
+        "tailor_id": "sample-tailor-aliya-formal",
+        "name": "Aliya Formal Dresses",
+        "shop_name": "Aliya Formal Dresses",
+        "bio": "Custom female formal dresses, long frocks, maxis, and elegant evening wear.",
+        "address": "Shop 8, MM Alam Road, Gulberg III, Lahore, Pakistan",
+        "specialties": ["Formal", "Party"],
+        "price_range": "mid",
+        "phone": "+92 321 5560190",
+        "avatar_url": None,
+        "cover_url": None,
+        "working_hours": "Daily, 10:30 AM - 9:30 PM",
+        "rating": 4.6,
+        "review_count": 124,
+        "is_available": True,
+        "is_verified": True,
+        "latitude": 31.5155,
+        "longitude": 74.3529,
+    },
+    {
+        "tailor_id": "sample-tailor-noor-party",
+        "name": "Noor Party Wear Studio",
+        "shop_name": "Noor Party Wear Studio",
+        "bio": "Female party dresses, embellished kurtis, organza suits, and festive outfits.",
+        "address": "Shop 21, Main Boulevard, Gulberg II, Lahore, Pakistan",
+        "specialties": ["Party", "Formal"],
+        "price_range": "budget",
+        "phone": "+92 333 2198744",
+        "avatar_url": None,
+        "cover_url": None,
+        "working_hours": "Mon-Sun, 12:00 PM - 9:00 PM",
+        "rating": 4.2,
+        "review_count": 79,
+        "is_available": True,
+        "is_verified": False,
+        "latitude": 31.5266,
+        "longitude": 74.3553,
+    },
+    {
+        "tailor_id": "sample-tailor-fatima-traditional",
+        "name": "Fatima Traditional Wear",
+        "shop_name": "Fatima Traditional Wear",
+        "bio": "Female traditional shalwar kameez, gharara, sharara, and dupatta finishing.",
+        "address": "Shop 5, Ichra Bazaar, Ferozepur Road, Lahore, Pakistan",
+        "specialties": ["Traditional"],
+        "price_range": "budget",
+        "phone": "+92 312 9018820",
+        "avatar_url": None,
+        "cover_url": None,
+        "working_hours": "Mon-Sat, 10:00 AM - 8:00 PM",
+        "rating": 3.9,
+        "review_count": 52,
+        "is_available": False,
+        "is_verified": False,
+        "latitude": 31.5320,
+        "longitude": 74.3197,
+    },
+    {
+        "tailor_id": "sample-tailor-hira-party",
+        "name": "Hira Party Couture",
+        "shop_name": "Hira Party Couture",
+        "bio": "Female party couture, mehndi outfits, stitched maxis, and festive formal wear.",
+        "address": "Shop G-14, Fortress Square Mall, Cantt, Lahore, Pakistan",
+        "specialties": ["Party", "Traditional"],
+        "price_range": "mid",
+        "phone": "+92 345 7740091",
+        "avatar_url": None,
+        "cover_url": None,
+        "working_hours": "Daily, 11:00 AM - 10:00 PM",
+        "rating": 4.4,
+        "review_count": 98,
+        "is_available": True,
+        "is_verified": True,
+        "latitude": 31.5319,
+        "longitude": 74.3642,
+    },
+]
+
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
@@ -76,6 +174,35 @@ async def ensure_tailor_map_indexes(db: Any) -> None:
             [("shop_name", "text"), ("specialties", "text"), ("bio", "text"), ("name", "text")],
             name="tailor_text_search",
         )
+        now = _now()
+        await db[COL_TAILOR_PROFILES].delete_many(
+            {
+                "tailor_id": {
+                    "$in": [
+                        "sample-tailor-ahmed-menswear",
+                        "sample-tailor-noor-casual",
+                        "sample-tailor-fatima-kids",
+                        "sample-tailor-imran-alterations",
+                    ]
+                }
+            }
+        )
+        for tailor in SAMPLE_TAILORS:
+            await db[COL_TAILOR_PROFILES].update_one(
+                {"tailor_id": tailor["tailor_id"]},
+                {
+                    "$set": {
+                        **tailor,
+                        "location": {
+                            "type": "Point",
+                            "coordinates": [tailor["longitude"], tailor["latitude"]],
+                        },
+                        "updated_at": now,
+                    },
+                    "$setOnInsert": {"created_at": now},
+                },
+                upsert=True,
+            )
     except Exception as exc:
         log.warning("Tailor map index setup skipped: %s", exc)
 
@@ -270,13 +397,18 @@ def create_tailor_map_router(db: Any) -> APIRouter:
                 {
                     "user_id": doc.get("tailor_id"),
                     "name": doc.get("name") or doc.get("shop_name") or "Tailor",
+                    "shop_name": doc.get("shop_name"),
+                    "address": doc.get("address"),
+                    "bio": doc.get("bio"),
+                    "working_hours": doc.get("working_hours"),
+                    "phone": doc.get("phone"),
                     "avatar": doc.get("avatar_url"),
                     "specialization": doc.get("specialties", []) or [],
                     "experience": doc.get("working_hours") and str(doc.get("working_hours")) or None,
                     "rating": _as_float(doc.get("rating"), 0.0),
                     "review_count": int(doc.get("review_count") or 0),
-                    "price_from": 1200,
-                    "price_to": 2800,
+                    "price_from": 1200 if doc.get("price_range") == "budget" else 2500 if doc.get("price_range") == "mid" else 4500,
+                    "price_to": 2200 if doc.get("price_range") == "budget" else 4500 if doc.get("price_range") == "mid" else 12000,
                     "is_available": bool(doc.get("is_available", True)),
                     "location": {"latitude": lat, "longitude": lng},
                     "distance_km": round(distance_km, 2),
@@ -323,13 +455,18 @@ def create_tailor_map_router(db: Any) -> APIRouter:
                     {
                         "user_id": doc.get("tailor_id"),
                         "name": doc.get("name") or doc.get("shop_name") or "Tailor",
+                        "shop_name": doc.get("shop_name"),
+                        "address": doc.get("address"),
+                        "bio": doc.get("bio"),
+                        "working_hours": doc.get("working_hours"),
+                        "phone": doc.get("phone"),
                         "avatar": doc.get("avatar_url"),
                         "specialization": doc.get("specialties", []) or [],
                         "experience": doc.get("working_hours") and str(doc.get("working_hours")) or None,
                         "rating": _as_float(doc.get("rating"), 0.0),
                         "review_count": int(doc.get("review_count") or 0),
-                        "price_from": 1200,
-                        "price_to": 2800,
+                        "price_from": 1200 if doc.get("price_range") == "budget" else 2500 if doc.get("price_range") == "mid" else 4500,
+                        "price_to": 2200 if doc.get("price_range") == "budget" else 4500 if doc.get("price_range") == "mid" else 12000,
                         "is_available": bool(doc.get("is_available", True)),
                         "location": {"latitude": _as_float(doc.get("latitude"), 0.0), "longitude": _as_float(doc.get("longitude"), 0.0)},
                         "distance_km": None,
@@ -348,13 +485,18 @@ def create_tailor_map_router(db: Any) -> APIRouter:
         return {
             "user_id": doc.get("tailor_id"),
             "name": doc.get("name") or doc.get("shop_name") or "Tailor",
+            "shop_name": doc.get("shop_name"),
+            "address": doc.get("address"),
+            "bio": doc.get("bio"),
+            "working_hours": doc.get("working_hours"),
+            "phone": doc.get("phone"),
             "avatar": doc.get("avatar_url"),
             "specialization": doc.get("specialties", []) or [],
             "experience": doc.get("working_hours") and str(doc.get("working_hours")) or None,
             "rating": _as_float(doc.get("rating"), 0.0),
             "review_count": int(doc.get("review_count") or 0),
-            "price_from": 1200,
-            "price_to": 2800,
+            "price_from": 1200 if doc.get("price_range") == "budget" else 2500 if doc.get("price_range") == "mid" else 4500,
+            "price_to": 2200 if doc.get("price_range") == "budget" else 4500 if doc.get("price_range") == "mid" else 12000,
             "is_available": bool(doc.get("is_available", True)),
             "location": {"latitude": _as_float(doc.get("latitude"), 0.0), "longitude": _as_float(doc.get("longitude"), 0.0)},
             "distance_km": None,
