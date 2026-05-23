@@ -1,0 +1,4 @@
+node_modules/
+.env
+data/uploadResults.json
+data/uploadFailed.json

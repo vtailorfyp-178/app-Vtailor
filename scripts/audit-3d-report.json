@@ -1,0 +1,43 @@
+{
+  "codeReferences": 63,
+  "catalogEntries": 442,
+  "uploadResultsWithUrl": 342,
+  "localGlbCount": 477,
+  "localSizeGb": "7.20",
+  "duplicateApp3dModels": {
+    "files": 0,
+    "mb": 0
+  },
+  "gitignoreBlocks3dModel": true,
+  "codeMissingCatalog": 0,
+  "codeMissingLocal": 63,
+  "localNotInCode": 477,
+  "missingCatalogList": [],
+  "missingLocalList": [
+    "3d model/3d lehnga/Bridal lehnga/mobile/ice blue round neck full sleeves .glb",
+    "3d model/3d lehnga/Bridal lehnga/mobile/ice blue round neck short sleeves .glb",
+    "3d model/3d lehnga/Bridal lehnga/mobile/ice blue sweet heart neck full sleeves .glb",
+    "3d model/3d lehnga/Bridal lehnga/mobile/ice blue sweet heart neck short sleeves .glb",
+    "3d model/3d lehnga/Bridal lehnga/mobile/mahroon round neck full sleeves .glb",
+    "3d model/3d lehnga/Bridal lehnga/mobile/mahroon sweatheart full  sleeves.glb",
+    "3d model/3d lehnga/Bridal lehnga/mobile/mahroon sweatheart short sleeves.glb",
+    "3d model/3d lehnga/Bridal lehnga/mobile/peach round neck full sleeves .glb",
+    "3d model/3d lehnga/Bridal lehnga/mobile/peach round neck short sleeves .glb",
+    "3d model/3d lehnga/Bridal lehnga/mobile/peach sweet heart neck full sleeves .glb",
+    "3d model/3d lehnga/Bridal lehnga/mobile/peach sweet heart neck short sleeves .glb",
+    "3d model/3d lehnga/Bridal lehnga/mobile/red round neck full sleeves .glb",
+    "3d model/3d lehnga/Bridal lehnga/mobile/red round neck short sleeves .glb",
+    "3d model/3d lehnga/Bridal lehnga/mobile/red sweet heart neck full sleeves .glb",
+    "3d model/3d lehnga/Bridal lehnga/mobile/red sweet heart neck short sleeves .glb",
+    "3d model/3d lehnga/circular/mobile/black round neck bell sleeves circular.glb",
+    "3d model/3d lehnga/circular/mobile/black round neck full sleeves circular.glb",
+    "3d model/3d lehnga/circular/mobile/black v neck bell sleeves circular.glb",
+    "3d model/3d lehnga/circular/mobile/black v neck full sleeves circular.glb",
+    "3d model/3d lehnga/circular/mobile/blue round neck bell sleeves circular.glb",
+    "3d model/3d lehnga/circular/mobile/blue round neck full sleeves circular.glb",
+    "3d model/3d lehnga/circular/mobile/blue v neck bell sleeves circular.glb",
+    "3d model/3d lehnga/circular/mobile/blue v neck full sleeves circular.glb",
+    "3d model/3d lehnga/circular/mobile/red round neck bell sleeves circular.glb",
+    "3d model/3d lehnga/circular/mobile/red round neck full sleeves circular.glb"
+  ]
+}

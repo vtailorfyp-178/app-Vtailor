@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+
+# 3D assets — served from Cloudinary (not in Git)
+3d model/
+app/3dModels/
+*.glb

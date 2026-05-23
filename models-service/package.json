@@ -1,0 +1,27 @@
+{
+  "name": "vtailor-models-service",
+  "version": "1.0.0",
+  "description": "Cloudinary GLB catalog API for vTailor 3D fashion app",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "upload:glbs": "node src/scripts/uploadGlbs.js",
+    "upload:glbs:no-mongo": "node src/scripts/uploadGlbs.js --skip-mongo",
+    "upload:grarah-optimized": "node src/scripts/uploadGrarahOptimized.js --skip-mongo",
+    "verify:cloudinary": "node src/scripts/verifyCloudinary.js",
+    "seed:from-results": "node src/scripts/seedFromUploadResults.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "cloudinary": "^2.5.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "mongoose": "^8.9.5",
+    "morgan": "^1.10.0"
+  }
+}
