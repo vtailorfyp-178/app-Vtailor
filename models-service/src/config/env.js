@@ -54,6 +54,8 @@ module.exports = {
   CLOUDINARY_API_KEY: required('CLOUDINARY_API_KEY'),
   CLOUDINARY_API_SECRET: required('CLOUDINARY_API_SECRET'),
   CLOUDINARY_BASE_FOLDER: process.env.CLOUDINARY_BASE_FOLDER || 'vtailor-models',
+  FABRIC_PRINTS_FOLDER: process.env.FABRIC_PRINTS_FOLDER || 'vtailor-fabric-prints',
+  FABRIC_PRINT_MAX_BYTES: Number(process.env.FABRIC_PRINT_MAX_BYTES || 8 * 1024 * 1024),
   UPLOAD_DELAY_MS: Number(process.env.UPLOAD_DELAY_MS || 1500),
   UPLOAD_MAX_RETRIES: Number(process.env.UPLOAD_MAX_RETRIES || 2),
   UPLOAD_BATCH_SIZE: Math.max(1, Number(process.env.UPLOAD_BATCH_SIZE || 1)),

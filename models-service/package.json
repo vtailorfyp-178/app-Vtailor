@@ -10,6 +10,9 @@
     "upload:glbs": "node src/scripts/uploadGlbs.js",
     "upload:glbs:no-mongo": "node src/scripts/uploadGlbs.js --skip-mongo",
     "upload:grarah-optimized": "node src/scripts/uploadGrarahOptimized.js --skip-mongo",
+    "upload:bridal-mahroon-short": "node src/scripts/uploadBridalMahroonShort.js --skip-mongo",
+    "upload:bell-bottom": "node src/scripts/uploadBellBottom.js --skip-mongo",
+    "upload:tulip-trouser": "node src/scripts/uploadTulipTrouser.js --skip-mongo",
     "verify:cloudinary": "node src/scripts/verifyCloudinary.js",
     "seed:from-results": "node src/scripts/seedFromUploadResults.js"
   },
@@ -22,6 +25,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "mongoose": "^8.9.5",
-    "morgan": "^1.10.0"
+    "morgan": "^1.10.0",
+    "multer": "^2.1.1"
   }
 }

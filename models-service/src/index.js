@@ -5,6 +5,9 @@ const { PORT, NODE_ENV } = require('./config/env');
 const { connectDatabase } = require('./config/database');
 const { readJsonCatalog } = require('./services/catalogStore');
 const modelsRouter = require('./routes/models.routes');
+const bellBottomRouter = require('./routes/bellBottom.routes');
+const tulipTrouserRouter = require('./routes/tulipTrouser.routes');
+const fabricPrintsRouter = require('./routes/fabricPrints.routes');
 
 const app = express();
 
@@ -24,6 +27,9 @@ app.get('/health', async (_req, res) => {
 });
 
 app.use('/models', modelsRouter);
+app.use('/bell-bottom', bellBottomRouter);
+app.use('/tulip-trouser', tulipTrouserRouter);
+app.use('/fabric-prints', fabricPrintsRouter);
 
 app.use((err, _req, res, _next) => {
   console.error('[models-service]', err);
@@ -34,7 +40,9 @@ async function start() {
   try {
     await connectDatabase();
   } catch (err) {
-    console.warn('[startup] Running without MongoDB — use data/uploadResults.json for GET /models');
+    const mongoose = require('mongoose');
+    mongoose.set('bufferCommands', false);
+    console.warn('[startup] Running without MongoDB — fabric prints still upload to Cloudinary');
     console.warn('[startup]', err.message);
   }
 
@@ -45,8 +53,10 @@ async function start() {
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Models API: http://0.0.0.0:${PORT}`);
-    console.log(`  GET http://localhost:${PORT}/models`);
-    console.log(`  Phone: http://YOUR_PC_IP:${PORT}/models`);
+    console.log(`  GET  http://localhost:${PORT}/health`);
+    console.log(`  GET  http://localhost:${PORT}/models`);
+    console.log(`  POST http://localhost:${PORT}/fabric-prints/upload`);
+    console.log(`  Phone: http://YOUR_PC_IP:${PORT}/health`);
   });
 }
 

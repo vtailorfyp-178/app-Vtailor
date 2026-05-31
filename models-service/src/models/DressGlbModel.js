@@ -17,6 +17,13 @@ const dressGlbSchema = new mongoose.Schema(
     publicId: { type: String, required: true },
     bytes: { type: Number },
     uploadedAt: { type: Date, default: Date.now },
+    /** Trouser shirt / bell bottom (optional — legacy rows omit these). */
+    variation: { type: String, index: true },
+    neckType: { type: String, index: true },
+    sleeveType: { type: String, index: true },
+    previewImage: { type: String },
+    thumbnail: { type: String },
+    colors: [{ type: String }],
   },
   { timestamps: true },
 );

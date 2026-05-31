@@ -40,6 +40,17 @@ class Settings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: str | None = None
     S3_BUCKET: str = "tailor-app-media"
 
+    # Local models-service (GLB catalog)
+    MODELS_SERVICE_URL: str = "http://127.0.0.1:3001"
+
+    # Cloudinary — fabric print uploads (falls back to models-service/.env if unset)
+    CLOUDINARY_CLOUD_NAME: str | None = None
+    CLOUDINARY_API_KEY: str | None = None
+    CLOUDINARY_API_SECRET: str | None = None
+    CLOUDINARY_BASE_FOLDER: str = "vtailor-models"
+    FABRIC_PRINTS_FOLDER: str = "vtailor-fabric-prints"
+    FABRIC_PRINT_MAX_BYTES: int = 8 * 1024 * 1024
+
     model_config = ConfigDict(
         env_file=".env",
         extra="ignore",
