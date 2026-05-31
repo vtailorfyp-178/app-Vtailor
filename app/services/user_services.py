@@ -103,6 +103,54 @@ async def list_all_users(skip: int = 0, limit: int = 10):
     return {"users": users, "total": total}
 
 
+async def search_users(
+    query: str = "",
+    role: str | None = None,
+    exclude_user_id: str | None = None,
+    limit: int = 30,
+) -> list[dict]:
+    """
+    Search users by name or email (case-insensitive substring).
+    Optionally filter by role and exclude the requesting user.
+    Returns a lightweight list for profile discovery / new-chat flow.
+    """
+    db = get_database()
+    mongo_filter: dict = {"is_active": True}
+
+    if role:
+        mongo_filter["role"] = role
+
+    if query.strip():
+        q = query.strip()
+        mongo_filter["$or"] = [
+            {"name": {"$regex": q, "$options": "i"}},
+            {"email": {"$regex": q, "$options": "i"}},
+        ]
+
+    users = await db.users.find(mongo_filter).limit(limit * 2).to_list(length=limit * 2)
+
+    results = []
+    for u in users:
+        uid = str(u.get("_id"))
+        if exclude_user_id and uid == exclude_user_id:
+            continue
+        results.append({
+            "user_id": uid,
+            "name": u.get("name") or "",
+            "email": u.get("email") or "",
+            "phone": u.get("phone") or "",
+            "role": u.get("role", "customer"),
+            "avatar": u.get("avatar"),
+            "specialization": u.get("specialization") or [],
+            "experience": u.get("experience") or "",
+            "is_available": bool(u.get("is_available", False)),
+        })
+        if len(results) >= limit:
+            break
+
+    return results
+
+
 def _safe_float(value, default: float | None = None) -> float | None:
     try:
         if value is None:

@@ -74,6 +74,10 @@ async def startup():
     conv_svc = ConversationService(db)
     await conv_svc.ensure_indexes()
     await ensure_tailor_map_indexes(db)
+    from app.services.notification_service import ensure_notification_indexes
+    await ensure_notification_indexes()
+    from app.api.v1.routers.orders import _ensure_indexes as ensure_order_indexes
+    await ensure_order_indexes()
     conv_router = create_conversation_router(
         db=db,
         s3_client=s3_client,

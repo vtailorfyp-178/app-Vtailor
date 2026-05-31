@@ -16,6 +16,7 @@ from app.services.user_services import (
     get_nearby_tailors,
     update_tailor_availability,
     update_tailor_location,
+    search_users,
 )
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -87,6 +88,31 @@ async def get_current_user_profile(
     Requires: Authorization: Bearer <token>
     """
     return UserProfile(**user_to_profile(current_user))
+
+
+@router.get(
+    "/search",
+    summary="Search users by name or email (for new-chat / profile discovery)",
+)
+async def search_users_api(
+    q: str = Query("", description="Name or email substring to search"),
+    role: str | None = Query(None, description="Filter by role: tailor | customer"),
+    limit: int = Query(20, ge=1, le=100),
+    current_user: dict = Depends(get_current_active_user),
+):
+    """
+    Search active users by name/email substring.
+    Excludes the requesting user from results.
+    Authenticated endpoint — any role may call it.
+    """
+    exclude_id = str(current_user.get("_id"))
+    results = await search_users(
+        query=q,
+        role=role,
+        exclude_user_id=exclude_id,
+        limit=limit,
+    )
+    return {"results": results, "count": len(results)}
 
 
 @router.get(

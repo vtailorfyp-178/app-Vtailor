@@ -8,6 +8,7 @@ from app.schemas.wallet import (
 )
 from app.services.wallet_services import apply_wallet_transaction, fail_wallet_transaction, get_wallet_summary
 from app.services.wallet_services import confirm_wallet_transaction
+from app.services.notification_service import create_notification
 
 
 router = APIRouter(prefix="/wallet", tags=["Wallet"])
@@ -49,6 +50,36 @@ async def create_wallet_transaction(
     pending_message = "Complete provider payment to finalize wallet top-up"
     if is_pending and tx.get("transaction_type") == "withdraw":
         pending_message = "Complete provider verification to finalize withdrawal"
+
+    # Fire in-app notification for the wallet event
+    tx_type = tx.get("transaction_type", "")
+    amount = tx.get("amount", 0)
+    method = tx.get("payment_method", "")
+    if is_pending:
+        notif_title = "Wallet Transaction Pending"
+        notif_msg = (
+            f"Your {'withdrawal' if tx_type == 'withdraw' else 'top-up'} of Rs. {amount:,.0f}"
+            f" via {method} is pending. Complete the provider step to finish."
+        )
+        notif_type = "wallet_pending"
+    else:
+        notif_title = "Wallet Transaction Successful"
+        notif_msg = (
+            f"Rs. {amount:,.0f} {'withdrawn' if tx_type == 'withdraw' else 'added to your wallet'}"
+            f" via {method}."
+        )
+        notif_type = "wallet_confirmed"
+    try:
+        await create_notification(
+            user_id=user_id,
+            type=notif_type,
+            title=notif_title,
+            message=notif_msg,
+            data={"transaction_id": str(tx.get("_id", tx.get("id", ""))), "amount": amount},
+        )
+    except Exception:
+        pass  # notification failure must never break the transaction response
+
     return WalletTransactionResponse(
         status="pending" if is_pending else "success",
         message=pending_message if is_pending else "Transaction completed successfully",
@@ -71,6 +102,25 @@ async def confirm_transaction(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     summary = await get_wallet_summary(user_id=user_id, limit=20)
+
+    # Notify user that the transaction was confirmed
+    tx_type = tx.get("transaction_type", "")
+    amount = tx.get("amount", 0)
+    method = tx.get("payment_method", "")
+    try:
+        await create_notification(
+            user_id=user_id,
+            type="wallet_confirmed",
+            title="Payment Confirmed",
+            message=(
+                f"Rs. {amount:,.0f} {'withdrawal' if tx_type == 'withdraw' else 'wallet top-up'}"
+                f" via {method} has been confirmed."
+            ),
+            data={"transaction_id": transaction_id, "amount": amount},
+        )
+    except Exception:
+        pass
+
     return WalletTransactionResponse(
         status="success",
         message="Transaction confirmed",
@@ -94,6 +144,24 @@ async def fail_transaction(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     summary = await get_wallet_summary(user_id=user_id, limit=20)
+
+    # Notify user that the transaction failed
+    tx_type = tx.get("transaction_type", "")
+    amount = tx.get("amount", 0)
+    try:
+        await create_notification(
+            user_id=user_id,
+            type="wallet_failed",
+            title="Transaction Failed",
+            message=(
+                f"Your {'withdrawal' if tx_type == 'withdraw' else 'top-up'} of Rs. {amount:,.0f}"
+                f" could not be completed. {reason or 'Please try again.'}"
+            ),
+            data={"transaction_id": transaction_id, "amount": amount, "reason": reason or ""},
+        )
+    except Exception:
+        pass
+
     return WalletTransactionResponse(
         status="failed",
         message=reason or "Transaction failed",

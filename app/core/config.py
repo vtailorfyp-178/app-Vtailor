@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     EASYPAISA_PAYOUT_API_URL: str | None = None
     WALLET_GATEWAY_SIMULATION: bool = True
 
+    # Stream Chat — https://dashboard.getstream.io/
+    STREAM_API_KEY: str | None = None
+    STREAM_API_SECRET: str | None = None
+
     # AWS S3 for conversation media storage
     AWS_REGION: str = "us-east-1"
     AWS_ACCESS_KEY_ID: str | None = None
