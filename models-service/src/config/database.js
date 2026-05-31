@@ -3,6 +3,10 @@ const { MONGODB_URL, MONGO_DB_NAME, SKIP_MONGODB } = require('./env');
 
 let connected = false;
 
+function isDatabaseConnected() {
+  return !SKIP_MONGODB && connected && mongoose.connection.readyState === 1;
+}
+
 async function connectDatabase() {
   if (SKIP_MONGODB) {
     console.log('[db] SKIP_MONGODB=true — MongoDB disabled for this run');
@@ -23,6 +27,7 @@ async function connectDatabase() {
     console.log('[db] MongoDB connected');
     return mongoose.connection;
   } catch (err) {
+    mongoose.set('bufferCommands', false);
     console.error('\n[db] MongoDB connection failed.');
     console.error('  Fix one of these:');
     console.error('  1) Use Atlas: copy MONGODB_URL from app-Vtailor\\.env into models-service\\.env');
@@ -40,4 +45,4 @@ async function disconnectDatabase() {
   connected = false;
 }
 
-module.exports = { connectDatabase, disconnectDatabase };
+module.exports = { connectDatabase, disconnectDatabase, isDatabaseConnected };

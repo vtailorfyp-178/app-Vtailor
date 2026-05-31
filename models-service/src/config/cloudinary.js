@@ -29,4 +29,34 @@ async function uploadGlbRaw(filePath, folder, publicId) {
   });
 }
 
-module.exports = { cloudinary, uploadGlbRaw };
+/**
+ * Upload customer fabric print — optimized image for 3D texture mapping.
+ * @param {Buffer} buffer File bytes from multer
+ * @param {string} folder Cloudinary folder
+ * @param {string} publicId Unique public id (no extension)
+ * @param {string} mime e.g. image/jpeg
+ */
+function uploadFabricPrintBuffer(buffer, folder, publicId, mime = 'image/jpeg') {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        resource_type: 'image',
+        folder,
+        public_id: publicId,
+        overwrite: true,
+        unique_filename: false,
+        use_filename: false,
+        quality: 'auto:good',
+        fetch_format: 'auto',
+        flags: 'preserve_transparency',
+      },
+      (err, result) => {
+        if (err) reject(err);
+        else resolve(result);
+      },
+    );
+    stream.end(buffer);
+  });
+}
+
+module.exports = { cloudinary, uploadGlbRaw, uploadFabricPrintBuffer };
