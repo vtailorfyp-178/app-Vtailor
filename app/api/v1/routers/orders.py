@@ -70,6 +70,12 @@ class DeclineOrderRequest(BaseModel):
     note: str | None = None
 
 
+class ProposePriceRequest(BaseModel):
+    proposed_price: float = Field(..., gt=0)
+    delivery_days:  int   = Field(..., gt=0)
+    note:           str | None = None
+
+
 class OrderOut(BaseModel):
     id:             str
     customer_id:    str
@@ -282,6 +288,155 @@ async def decline_order(
             message=f"{tailor_name} could not accept your '{doc['description']}' request."
             + (f" Reason: {note}" if note else ""),
             data={"orderId": order_id, "tailorId": user_id, "tailorName": tailor_name},
+        )
+    except Exception:
+        pass
+
+    doc.update(update)
+    doc["_id"] = ObjectId(order_id)
+    return _out(_serialize(doc))
+
+
+@router.patch("/{order_id}/propose-price", response_model=OrderOut)
+async def propose_price(
+    order_id: str,
+    body: ProposePriceRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """Tailor proposes a custom price (different from customer budget). Customer must approve."""
+    user_id = str(current_user.get("_id"))
+    db      = get_database()
+    try:
+        doc = await db.orders.find_one({"_id": ObjectId(order_id)})
+    except Exception:
+        doc = None
+    if not doc:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if str(doc["tailor_id"]) != user_id:
+        raise HTTPException(status_code=403, detail="Only the tailor can propose a price")
+    if doc["status"] != "pending":
+        raise HTTPException(status_code=400, detail="Order is not pending")
+
+    update = {
+        "status":         "price_proposed",
+        "proposed_price": body.proposed_price,
+        "delivery_days":  body.delivery_days,
+        "note":           body.note,
+        "updated_at":     _now(),
+    }
+    await db.orders.update_one({"_id": ObjectId(order_id)}, {"$set": update})
+
+    tailor_name = current_user.get("name") or current_user.get("email") or "Tailor"
+    try:
+        await create_notification(
+            user_id=str(doc["customer_id"]),
+            type="order_price_proposed",
+            title="Tailor Proposed a Price",
+            message=(
+                f"{tailor_name} wants Rs. {body.proposed_price:,.0f} for your "
+                f"'{doc['description']}' request (your budget: Rs. {doc['budget']:,.0f}). "
+                f"Delivery in {body.delivery_days} day(s). Approve or Reject?"
+            ),
+            data={
+                "orderId":       order_id,
+                "tailorId":      user_id,
+                "tailorName":    tailor_name,
+                "proposedPrice": body.proposed_price,
+                "deliveryDays":  body.delivery_days,
+                "budget":        doc["budget"],
+            },
+        )
+    except Exception:
+        pass
+
+    doc.update(update)
+    doc["_id"] = ObjectId(order_id)
+    return _out(_serialize(doc))
+
+
+@router.patch("/{order_id}/confirm", response_model=OrderOut)
+async def confirm_order(
+    order_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Customer approves the tailor's proposed price → order is confirmed/placed."""
+    user_id = str(current_user.get("_id"))
+    db      = get_database()
+    try:
+        doc = await db.orders.find_one({"_id": ObjectId(order_id)})
+    except Exception:
+        doc = None
+    if not doc:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if str(doc["customer_id"]) != user_id:
+        raise HTTPException(status_code=403, detail="Only the customer can confirm this order")
+    if doc["status"] != "price_proposed":
+        raise HTTPException(status_code=400, detail="Order is not awaiting price confirmation")
+
+    update = {"status": "confirmed", "updated_at": _now()}
+    await db.orders.update_one({"_id": ObjectId(order_id)}, {"$set": update})
+
+    customer_name = current_user.get("name") or current_user.get("email") or "Customer"
+    try:
+        await create_notification(
+            user_id=str(doc["tailor_id"]),
+            type="order_confirmed",
+            title="Order Confirmed!",
+            message=(
+                f"{customer_name} approved your price of Rs. {doc.get('proposed_price', 0):,.0f} "
+                f"for '{doc['description']}'. The order is now confirmed."
+            ),
+            data={
+                "orderId":      order_id,
+                "customerId":   user_id,
+                "customerName": customer_name,
+            },
+        )
+    except Exception:
+        pass
+
+    doc.update(update)
+    doc["_id"] = ObjectId(order_id)
+    return _out(_serialize(doc))
+
+
+@router.patch("/{order_id}/reject-price", response_model=OrderOut)
+async def reject_price(
+    order_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Customer rejects the tailor's proposed price → order is declined."""
+    user_id = str(current_user.get("_id"))
+    db      = get_database()
+    try:
+        doc = await db.orders.find_one({"_id": ObjectId(order_id)})
+    except Exception:
+        doc = None
+    if not doc:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if str(doc["customer_id"]) != user_id:
+        raise HTTPException(status_code=403, detail="Only the customer can reject a price proposal")
+    if doc["status"] != "price_proposed":
+        raise HTTPException(status_code=400, detail="Order is not awaiting price confirmation")
+
+    update = {"status": "declined", "note": "Customer rejected the proposed price.", "updated_at": _now()}
+    await db.orders.update_one({"_id": ObjectId(order_id)}, {"$set": update})
+
+    customer_name = current_user.get("name") or current_user.get("email") or "Customer"
+    try:
+        await create_notification(
+            user_id=str(doc["tailor_id"]),
+            type="order_price_rejected",
+            title="Price Proposal Rejected",
+            message=(
+                f"{customer_name} declined your Rs. {doc.get('proposed_price', 0):,.0f} proposal "
+                f"for '{doc['description']}'."
+            ),
+            data={
+                "orderId":      order_id,
+                "customerId":   user_id,
+                "customerName": customer_name,
+            },
         )
     except Exception:
         pass
