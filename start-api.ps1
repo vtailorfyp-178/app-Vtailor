@@ -2,6 +2,27 @@
 # If you only use: uvicorn ... --host 127.0.0.1  →  mobile will NEVER work.
 Set-Location $PSScriptRoot
 
+if (-not (Test-Path ".env")) {
+  Write-Host "ERROR: Missing Folder\.env" -ForegroundColor Red
+  Write-Host "  1) copy .env.example to .env"
+  Write-Host "  2) set JWT_SECRET_KEY, MONGODB_URL, MONGO_DB_NAME, STYTCH_PROJECT_ID, STYTCH_SECRET"
+  Write-Host "  See AUTH_SECURITY_IMPLEMENTATION.md for details."
+  exit 1
+}
+
+Write-Host "Checking Python dependencies..."
+python -c "from app.main import app" 2>$null
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "Installing requirements (first time or missing stream-chat)..."
+  pip install -r requirements.txt
+  python -c "from app.main import app"
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host "ERROR: Backend import failed. Read the Python error above." -ForegroundColor Red
+    exit 1
+  }
+}
+Write-Host "Backend import OK."
+
 $port = 8000
 
 function Get-LanIpv4 {
@@ -56,4 +77,5 @@ Write-Host "Test on PC browser: http://${lanIp}:$port/docs"
 Write-Host "Test health:        http://${lanIp}:$port/health"
 Write-Host ""
 
-uvicorn app.main:app --host 0.0.0.0 --port $port --reload
+# --reload-dir app: stable on Windows; .env loaded from Folder via app/core/config.py
+python -m uvicorn app.main:app --host 0.0.0.0 --port $port --reload --reload-dir app

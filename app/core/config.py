@@ -1,6 +1,12 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings # all for app configuration
 from pydantic import ConfigDict
 from functools import lru_cache
+
+# Folder/ (backend root) — works with uvicorn --reload on Windows (subprocess cwd may differ)
+_BACKEND_ROOT = Path(__file__).resolve().parent.parent.parent
+_ENV_FILE = _BACKEND_ROOT / ".env"
 
 
 class Settings(BaseSettings):
@@ -56,7 +62,7 @@ class Settings(BaseSettings):
     FABRIC_PRINT_MAX_BYTES: int = 8 * 1024 * 1024
 
     model_config = ConfigDict(
-        env_file=".env",
+        env_file=str(_ENV_FILE) if _ENV_FILE.is_file() else ".env",
         extra="ignore",
         case_sensitive=True,
     )

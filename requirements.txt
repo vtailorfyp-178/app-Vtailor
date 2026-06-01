@@ -21,3 +21,4 @@ boto3
 cloudinary
 Pillow
 aiosmtplib
+stream-chat

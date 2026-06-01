@@ -19,9 +19,20 @@ router = APIRouter(prefix="/stream", tags=["Stream Chat"])
 # ── Schemas ────────────────────────────────────────────────────────────────────
 
 class StreamTokenResponse(BaseModel):
-    token: str
-    api_key: str
+    configured: bool = True
+    token: str = ""
+    api_key: str = ""
+    user_id: str = ""
+
+
+class StreamNotConfiguredResponse(BaseModel):
+    configured: bool = False
     user_id: str
+    message: str = (
+        "Stream Chat is not configured. "
+        "Add STREAM_API_KEY and STREAM_API_SECRET in backend .env "
+        "from https://dashboard.getstream.io/"
+    )
 
 
 class ChannelRequest(BaseModel):
@@ -38,28 +49,28 @@ class ChannelResponse(BaseModel):
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
-def _require_stream() -> None:
-    if not svc.is_stream_configured():
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=(
-                "Stream Chat is not configured. "
-                "Add STREAM_API_KEY and STREAM_API_SECRET in backend .env "
-                "from https://dashboard.getstream.io/"
-            ),
-        )
+def _stream_not_configured(user_id: str) -> StreamNotConfiguredResponse:
+    return StreamNotConfiguredResponse(configured=False, user_id=user_id)
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
 
-@router.get("/token", response_model=StreamTokenResponse)
+@router.get("/status")
+async def get_stream_status():
+    """Public check — lets the app skip Stream calls when backend has no Stream keys."""
+    return {"configured": svc.is_stream_configured()}
+
+
+@router.get("/token", response_model=StreamTokenResponse | StreamNotConfiguredResponse)
 async def get_stream_token(current_user: dict = Depends(get_current_user)):
     """
     Issue a Stream user token for the currently authenticated app user.
     Frontend calls this once after JWT login and passes the token to StreamChat.connectUser().
+    When Stream is not configured, returns 200 with configured=false (not 503).
     """
-    _require_stream()
     user_id = str(current_user.get("_id"))
+    if not svc.is_stream_configured():
+        return _stream_not_configured(user_id)
     name = current_user.get("name") or current_user.get("email") or user_id
     role = current_user.get("role", "customer")
     avatar = current_user.get("avatar")
@@ -71,6 +82,7 @@ async def get_stream_token(current_user: dict = Depends(get_current_user)):
         token = svc.create_stream_user_token(user_id)
         from app.core.config import get_settings
         return StreamTokenResponse(
+            configured=True,
             token=token,
             api_key=get_settings().STREAM_API_KEY or "",
             user_id=user_id,
@@ -91,8 +103,16 @@ async def get_or_create_channel(
     Create (or return existing) a 1-to-1 Stream channel between a tailor and customer.
     Either participant may call this.
     """
-    _require_stream()
     current_user_id = str(current_user.get("_id"))
+    if not svc.is_stream_configured():
+        raise HTTPException(
+            status_code=status.HTTP_424_FAILED_DEPENDENCY,
+            detail=(
+                "Stream Chat is not configured. "
+                "Add STREAM_API_KEY and STREAM_API_SECRET in backend .env "
+                "from https://dashboard.getstream.io/"
+            ),
+        )
     allowed = {body.tailor_id, body.customer_id}
     if current_user_id not in allowed:
         raise HTTPException(
