@@ -1,4 +1,5 @@
-﻿import logging
+﻿import asyncio
+import logging
 import re
 import uuid
 from datetime import datetime, timezone
@@ -631,7 +632,7 @@ async def _generate_reply(text: str, messages: list[dict[str, str]], history: li
         response = await openai_client.chat.completions.create(
             model=settings.OPENAI_MODEL,
             messages=messages,
-            max_tokens=1200,
+            max_tokens=900,
             temperature=0.7,
         )
         raw = response.choices[0].message.content or ""
@@ -659,18 +660,39 @@ async def chat(req: ChatRequest) -> ChatResponse:
 
     db = get_database()
     session_id = req.session_id or str(uuid.uuid4())
+    now = datetime.now(timezone.utc)
 
-    history_cursor = (
-        db[CHAT_MESSAGES_COLLECTION]
-        .find(
-            {"user_id": req.user_id, "session_id": session_id},
-            {"_id": 0, "sender": 1, "text": 1},
+    # Fetch history and insert user message in parallel to save one round-trip
+    async def _fetch_history():
+        cursor = (
+            db[CHAT_MESSAGES_COLLECTION]
+            .find(
+                {"user_id": req.user_id, "session_id": session_id},
+                {"_id": 0, "sender": 1, "text": 1},
+            )
+            .sort("created_at", -1)
+            .limit(12)
         )
-        .sort("created_at", -1)
-        .limit(20)
-    )
-    history_docs = await history_cursor.to_list(length=20)
-    history_docs.reverse()
+        docs = await cursor.to_list(length=12)
+        docs.reverse()
+        return docs
+
+    async def _insert_user_msg():
+        await db[CHAT_MESSAGES_COLLECTION].insert_one(
+            {
+                "user_id": req.user_id,
+                "session_id": session_id,
+                "sender": "user",
+                "text": text,
+                "time": _time_str(now),
+                "created_at": now,
+            }
+        )
+
+    history_docs, _ = await asyncio.gather(_fetch_history(), _insert_user_msg())
+
+    is_first = len(history_docs) == 0
+    title = text[:60] if is_first else None
 
     messages = [{"role": "system", "content": FASHION_SYSTEM_PROMPT}]
     for msg in history_docs:
@@ -678,55 +700,45 @@ async def chat(req: ChatRequest) -> ChatResponse:
         messages.append({"role": role, "content": msg.get("text", "")})
     messages.append({"role": "user", "content": text})
 
-    now = datetime.now(timezone.utc)
-    is_first = len(history_docs) == 0
-    title = text[:60] if is_first else None
-
-    await db[CHAT_MESSAGES_COLLECTION].insert_one(
-        {
-            "user_id": req.user_id,
-            "session_id": session_id,
-            "sender": "user",
-            "text": text,
-            "time": _time_str(now),
-            "created_at": now,
-        }
-    )
-
     reply = await _generate_reply(text, messages, history_docs)
 
     ai_now = datetime.now(timezone.utc)
 
-    await db[CHAT_MESSAGES_COLLECTION].insert_one(
-        {
-            "user_id": req.user_id,
-            "session_id": session_id,
-            "sender": "ai",
-            "text": reply,
-            "time": _time_str(ai_now),
-            "created_at": ai_now,
-        }
-    )
-
-    if is_first and title:
-        await db[CHAT_SESSIONS_COLLECTION].update_one(
-            {"user_id": req.user_id, "session_id": session_id},
+    # Save AI message and update session in parallel
+    async def _insert_ai_msg():
+        await db[CHAT_MESSAGES_COLLECTION].insert_one(
             {
-                "$set": {
-                    "user_id": req.user_id,
-                    "session_id": session_id,
-                    "title": title,
-                    "created_at": now,
-                    "updated_at": ai_now,
-                }
-            },
-            upsert=True,
+                "user_id": req.user_id,
+                "session_id": session_id,
+                "sender": "ai",
+                "text": reply,
+                "time": _time_str(ai_now),
+                "created_at": ai_now,
+            }
         )
-    else:
-        await db[CHAT_SESSIONS_COLLECTION].update_one(
-            {"user_id": req.user_id, "session_id": session_id},
-            {"$set": {"updated_at": ai_now}},
-        )
+
+    async def _upsert_session():
+        if is_first and title:
+            await db[CHAT_SESSIONS_COLLECTION].update_one(
+                {"user_id": req.user_id, "session_id": session_id},
+                {
+                    "$set": {
+                        "user_id": req.user_id,
+                        "session_id": session_id,
+                        "title": title,
+                        "created_at": now,
+                        "updated_at": ai_now,
+                    }
+                },
+                upsert=True,
+            )
+        else:
+            await db[CHAT_SESSIONS_COLLECTION].update_one(
+                {"user_id": req.user_id, "session_id": session_id},
+                {"$set": {"updated_at": ai_now}},
+            )
+
+    await asyncio.gather(_insert_ai_msg(), _upsert_session())
 
     return ChatResponse(reply=reply, session_id=session_id)
 
