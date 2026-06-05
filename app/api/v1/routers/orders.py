@@ -13,7 +13,7 @@ Order document schema:
   budget          : float (customer's proposed budget)
   status          : 'pending' | 'accepted' | 'declined' | 'negotiating'
   proposed_price  : float | None   (tailor fills on accept)
-  delivery_days   : int   | None   (tailor fills on accept)
+  delivery_days   : int   | None   (customer sets on create; tailor may update on accept)
   note            : str   | None   (tailor's note on accept/decline)
   created_at      : datetime
   updated_at      : datetime
@@ -54,10 +54,11 @@ async def _ensure_indexes() -> None:
 # ── Schemas ────────────────────────────────────────────────────────────────────
 
 class CreateOrderRequest(BaseModel):
-    tailor_id:   str
-    tailor_name: str
-    description: str = Field(..., min_length=3)
-    budget:      float = Field(..., gt=0)
+    tailor_id:      str
+    tailor_name:    str
+    description:    str = Field(..., min_length=3)
+    budget:         float = Field(..., gt=0)
+    delivery_days:  int   = Field(..., gt=0)
 
 
 class AcceptOrderRequest(BaseModel):
@@ -134,7 +135,7 @@ async def create_order(
         "budget":         body.budget,
         "status":         "pending",
         "proposed_price": None,
-        "delivery_days":  None,
+        "delivery_days":  body.delivery_days,
         "note":           None,
         "created_at":     _now(),
         "updated_at":     _now(),
@@ -148,13 +149,17 @@ async def create_order(
             user_id=body.tailor_id,
             type="order_requested",
             title="New Order Request",
-            message=f"{customer_name} sent a request for '{body.description}'",
+            message=(
+                f"{customer_name} sent a request for '{body.description}' "
+                f"(Rs. {body.budget:,.0f}, {body.delivery_days} day(s))."
+            ),
             data={
                 "orderId":       str(result.inserted_id),
                 "customerId":    customer_id,
                 "customerName":  customer_name,
                 "description":   body.description,
                 "budget":        body.budget,
+                "deliveryDays":  body.delivery_days,
             },
         )
     except Exception:
