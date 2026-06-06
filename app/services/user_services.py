@@ -7,6 +7,7 @@ from bson import ObjectId
 async def get_user_by_email(email: str, role: str | None = None):
     """Get user by email address, optionally scoped to a role."""
     db = get_database()
+    email = email.strip().lower()
     query = {"email": email}
     if role:
         query["role"] = role

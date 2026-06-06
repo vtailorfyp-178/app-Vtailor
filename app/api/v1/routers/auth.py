@@ -94,20 +94,23 @@ async def otp_start(data: EmailOTPStartRequest):
     - **email**: Valid email address e.g. `user@example.com`
     """
     try:
+        email = data.email.strip().lower()
         # Ask Stytch to send OTP to the email without blocking the event loop.
-        resp = await _run_stytch_call(stytch_client.otps.email.login_or_create, email=data.email)
+        resp = await _run_stytch_call(stytch_client.otps.email.login_or_create, email=email)
 
-        method_id = (
-            getattr(resp, "method_id", None)
-            or getattr(resp, "email_id", None)
-            or getattr(resp, "user_id", None)
-        )
+        # Email OTP must use email_id (not user_id) for authenticate.
+        method_id = getattr(resp, "email_id", None) or getattr(resp, "method_id", None)
+        if not method_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="OTP session could not be started. Please try again.",
+            )
 
         return EmailOTPStartResponse(
             status="success",
-            message=f"OTP sent to {data.email}",
+            message=f"OTP sent to {email}",
             method_id=method_id,  # Frontend MUST store this for verify step
-            email=data.email,
+            email=email,
         )
 
     except HTTPException:
@@ -147,10 +150,17 @@ async def otp_verify(data: EmailOTPVerifyRequest):
     """
     try:
         # Send method_id + OTP code to Stytch without blocking the event loop.
+        code = data.code.strip()
+        if not code.isdigit() or len(code) != 6:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="OTP must be a 6-digit code.",
+            )
+
         resp = await _run_stytch_call(
             stytch_client.otps.authenticate,
-            method_id=data.method_id,
-            code=data.code,
+            method_id=data.method_id.strip(),
+            code=code,
             session_duration_minutes=60,
         )
 
@@ -166,6 +176,7 @@ async def otp_verify(data: EmailOTPVerifyRequest):
                 detail="Could not extract email from Stytch user.",
             )
 
+        email = email.strip().lower()
         requested_role = (data.role or "customer").strip().lower()
         if requested_role not in {"customer", "tailor", "admin"}:
             raise HTTPException(
