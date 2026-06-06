@@ -167,17 +167,22 @@ async def otp_verify(data: EmailOTPVerifyRequest):
             )
 
         requested_role = (data.role or "customer").strip().lower()
-        if requested_role not in {"customer", "tailor"}:
+        if requested_role not in {"customer", "tailor", "admin"}:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid role. Allowed roles are 'customer' and 'tailor'.",
+                detail="Invalid role. Allowed roles are 'customer', 'tailor', and 'admin'.",
             )
 
         # Look up user in OUR MongoDB by email + role
         mongo_user = await get_user_by_email(email, requested_role)
 
-        # First-time user for this role: create their record in MongoDB
-        if mongo_user is None:
+        if requested_role == "admin":
+            if mongo_user is None:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Admin account not found. Run scripts/create_admin.py first.",
+                )
+        elif mongo_user is None:
             mongo_user = await create_user(
                 email=email,
                 phone=None,

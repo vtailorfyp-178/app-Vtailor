@@ -415,17 +415,7 @@ async def list_users(
 
     result = await list_all_users(skip=skip, limit=limit)
 
-    users = [
-        UserProfile(
-            user_id=str(u.get("_id")),
-            email=u.get("email"),
-            phone=u.get("phone"),
-            role=u.get("role", "customer"),
-            is_active=u.get("is_active", True),
-            created_at=u.get("created_at"),
-        )
-        for u in result["users"]
-    ]
+    users = [UserProfile(**user_to_profile(u)) for u in result["users"]]
 
     return {
         "users": users,

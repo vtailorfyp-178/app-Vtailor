@@ -14,6 +14,7 @@ from app.db.mongodb import get_database
 settings = get_settings()
 
 _MODELS_DIR = Path(__file__).resolve().parent / "3dModels"
+_ADMIN_DIR = Path(__file__).resolve().parent.parent / "admin-dashboard"
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -41,6 +42,15 @@ if _MODELS_DIR.is_dir():
     )
 else:
     print(f"Warning: 3dModels directory not found at {_MODELS_DIR} — GLB static hosting disabled.")
+
+if _ADMIN_DIR.is_dir():
+    app.mount(
+        "/admin",
+        StaticFiles(directory=str(_ADMIN_DIR), html=True),
+        name="admin-dashboard",
+    )
+else:
+    print(f"Warning: admin-dashboard not found at {_ADMIN_DIR}")
 
 # S3 and Conversation router will be mounted in startup
 s3_client = None

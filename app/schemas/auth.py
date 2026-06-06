@@ -21,7 +21,7 @@ class EmailOTPVerifyRequest(BaseModel):
     """Step 2: Frontend sends method_id + OTP code to verify"""
     method_id: str   # Returned from /otp/start
     code: str        # 6-digit OTP from email
-    role: str        # customer | tailor
+    role: str        # customer | tailor | admin
 
     class Config:
         json_schema_extra = {

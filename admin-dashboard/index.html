@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>vTailor Admin</title>
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --primary: #be185d;
+      --primary-dark: #9d174d;
+      --border: #e2e8f0;
+      --ok: #059669;
+      --warn: #d97706;
+      --bad: #dc2626;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+    h1 { margin: 0 0 4px; font-size: 1.5rem; }
+    .sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 20px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+    label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+    input, select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      margin-bottom: 12px;
+    }
+    button {
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-ghost { background: #f8fafc; color: var(--text); border: 1px solid var(--border); }
+    .btn-sm { padding: 6px 10px; font-size: 0.8rem; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .row > * { flex: 1; min-width: 140px; }
+    .hidden { display: none !important; }
+    .err { color: var(--bad); font-size: 0.85rem; margin-top: 8px; }
+    .ok-msg { color: var(--ok); font-size: 0.85rem; }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .tab {
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #fff;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 12px;
+    }
+    .stat {
+      background: #fdf2f8;
+      border: 1px solid #fbcfe8;
+      border-radius: 10px;
+      padding: 14px;
+    }
+    .stat b { display: block; font-size: 1.4rem; }
+    .stat span { font-size: 0.78rem; color: var(--muted); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: capitalize;
+    }
+    .badge-customer { background: #fce7f3; color: #9d174d; }
+    .badge-tailor { background: #dbeafe; color: #1d4ed8; }
+    .badge-admin { background: #fef3c7; color: #92400e; }
+    .badge-pending { background: #fef9c3; color: #854d0e; }
+    .badge-confirmed { background: #d1fae5; color: #065f46; }
+    .badge-declined { background: #fee2e2; color: #991b1b; }
+    .badge-accepted, .badge-price_proposed { background: #e0e7ff; color: #3730a3; }
+    .inactive { opacity: 0.55; }
+    @media (max-width: 700px) {
+      table, thead, tbody, th, td, tr { display: block; }
+      thead { display: none; }
+      tr { margin-bottom: 12px; border: 1px solid var(--border); border-radius: 8px; padding: 8px; }
+      td { border: none; padding: 4px 0; }
+      td::before { content: attr(data-label) ": "; font-weight: 700; color: var(--muted); }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div>
+        <h1>vTailor Admin</h1>
+        <div class="sub">Monitor users, tailors, and orders</div>
+      </div>
+      <button id="logoutBtn" class="btn-ghost hidden" type="button">Logout</button>
+    </div>
+
+    <div id="loginCard" class="card">
+      <h2 style="margin:0 0 12px;font-size:1.1rem;">Admin login (email OTP)</h2>
+      <label>API base URL</label>
+      <input id="apiBase" type="text" placeholder="http://localhost:8000/app/api/v1" />
+      <label>Admin email</label>
+      <input id="email" type="email" placeholder="admin@yourdomain.com" />
+      <div id="otpStep1">
+        <button id="sendOtpBtn" class="btn-primary" type="button">Send OTP</button>
+      </div>
+      <div id="otpStep2" class="hidden">
+        <label>6-digit OTP</label>
+        <input id="otpCode" type="text" inputmode="numeric" maxlength="6" placeholder="123456" />
+        <button id="verifyOtpBtn" class="btn-primary" type="button">Verify &amp; login</button>
+      </div>
+      <p class="sub" style="margin-top:12px;">First time? Create admin: <code>python scripts/create_admin.py your@email.com</code></p>
+      <div id="loginErr" class="err hidden"></div>
+    </div>
+
+    <div id="appPanel" class="hidden">
+      <div class="tabs">
+        <button class="tab active" data-tab="overview" type="button">Overview</button>
+        <button class="tab" data-tab="users" type="button">Users</button>
+        <button class="tab" data-tab="orders" type="button">Orders</button>
+      </div>
+
+      <div id="tab-overview" class="tab-panel">
+        <div class="card">
+          <div class="row" style="margin-bottom:12px;">
+            <h2 style="margin:0;flex:2;">Platform stats</h2>
+            <button id="refreshStatsBtn" class="btn-ghost btn-sm" type="button">Refresh</button>
+          </div>
+          <div id="statsGrid" class="stats"></div>
+        </div>
+      </div>
+
+      <div id="tab-users" class="tab-panel hidden">
+        <div class="card">
+          <div class="row" style="margin-bottom:12px;">
+            <select id="userRoleFilter">
+              <option value="">All roles</option>
+              <option value="customer">Customers</option>
+              <option value="tailor">Tailors</option>
+              <option value="admin">Admins</option>
+            </select>
+            <button id="refreshUsersBtn" class="btn-ghost btn-sm" type="button">Refresh</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Email</th>
+                  <th>Name</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="usersBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-orders" class="tab-panel hidden">
+        <div class="card">
+          <div class="row" style="margin-bottom:12px;">
+            <select id="orderStatusFilter">
+              <option value="">All statuses</option>
+              <option value="pending">Pending</option>
+              <option value="accepted">Accepted</option>
+              <option value="price_proposed">Price proposed</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="declined">Declined</option>
+            </select>
+            <button id="refreshOrdersBtn" class="btn-ghost btn-sm" type="button">Refresh</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Customer</th>
+                  <th>Tailor</th>
+                  <th>Description</th>
+                  <th>Budget</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="ordersBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="panelErr" class="err hidden"></div>
+    </div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let methodId = '';
+    let token = localStorage.getItem('vtailor_admin_token') || '';
+
+    function defaultApiBase() {
+      const origin = window.location.origin;
+      if (origin.startsWith('http')) return origin + '/app/api/v1';
+      return 'http://localhost:8000/app/api/v1';
+    }
+
+    $('apiBase').value = localStorage.getItem('vtailor_admin_api') || defaultApiBase();
+
+    function apiBase() {
+      const v = $('apiBase').value.trim().replace(/\/$/, '');
+      localStorage.setItem('vtailor_admin_api', v);
+      return v;
+    }
+
+    function showErr(el, msg) {
+      el.textContent = msg || '';
+      el.classList.toggle('hidden', !msg);
+    }
+
+    async function api(path, options = {}) {
+      const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+      if (token) headers.Authorization = 'Bearer ' + token;
+      const res = await fetch(apiBase() + path, { ...options, headers });
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { detail: text }; }
+      if (!res.ok) throw new Error(data.detail || data.message || ('HTTP ' + res.status));
+      return data;
+    }
+
+    function roleBadge(role) {
+      return '<span class="badge badge-' + role + '">' + role + '</span>';
+    }
+
+    function statusBadge(status) {
+      return '<span class="badge badge-' + status + '">' + status.replace('_', ' ') + '</span>';
+    }
+
+    function showApp(loggedIn) {
+      $('loginCard').classList.toggle('hidden', loggedIn);
+      $('appPanel').classList.toggle('hidden', !loggedIn);
+      $('logoutBtn').classList.toggle('hidden', !loggedIn);
+    }
+
+    async function loadStats() {
+      const s = await api('/admin/stats');
+      $('statsGrid').innerHTML = [
+        ['Users', s.users_total],
+        ['Customers', s.customers],
+        ['Tailors', s.tailors],
+        ['Inactive', s.users_inactive],
+        ['Orders', s.orders_total],
+        ['Pending orders', s.orders_pending],
+        ['Confirmed', s.orders_confirmed],
+        ['Declined', s.orders_declined],
+      ].map(([label, val]) => '<div class="stat"><b>' + val + '</b><span>' + label + '</span></div>').join('');
+    }
+
+    async function loadUsers() {
+      const role = $('userRoleFilter').value;
+      const q = role ? '?role=' + encodeURIComponent(role) + '&limit=100' : '?limit=100';
+      const data = await api('/admin/users' + q);
+      const me = localStorage.getItem('vtailor_admin_id') || '';
+      $('usersBody').innerHTML = (data.users || []).map((u) => {
+        const active = u.is_active !== false;
+        const toggleLabel = active ? 'Deactivate' : 'Activate';
+        const canToggle = u.user_id !== me && u.role !== 'admin';
+        return '<tr class="' + (active ? '' : 'inactive') + '">' +
+          '<td data-label="Email">' + (u.email || '—') + '</td>' +
+          '<td data-label="Name">' + (u.name || '—') + '</td>' +
+          '<td data-label="Role">' + roleBadge(u.role || 'customer') + '</td>' +
+          '<td data-label="Status">' + (active ? 'Active' : 'Inactive') + '</td>' +
+          '<td data-label="Action">' + (canToggle
+            ? '<button class="btn-ghost btn-sm" data-toggle="' + u.user_id + '" data-active="' + active + '">' + toggleLabel + '</button>'
+            : '—') + '</td></tr>';
+      }).join('') || '<tr><td colspan="5">No users</td></tr>';
+
+      $('usersBody').querySelectorAll('[data-toggle]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const id = btn.getAttribute('data-toggle');
+          const isActive = btn.getAttribute('data-active') === 'true';
+          try {
+            await api('/users/' + id, {
+              method: 'PUT',
+              body: JSON.stringify({ is_active: !isActive }),
+            });
+            await loadUsers();
+            showErr($('panelErr'), '');
+          } catch (e) {
+            showErr($('panelErr'), e.message);
+          }
+        });
+      });
+    }
+
+    async function loadOrders() {
+      const status = $('orderStatusFilter').value;
+      const q = status ? '?status=' + encodeURIComponent(status) + '&limit=100' : '?limit=100';
+      const rows = await api('/admin/orders' + q);
+      $('ordersBody').innerHTML = (rows || []).map((o) =>
+        '<tr>' +
+        '<td data-label="Customer">' + (o.customer_name || '—') + '</td>' +
+        '<td data-label="Tailor">' + (o.tailor_name || '—') + '</td>' +
+        '<td data-label="Description">' + (o.description || '').slice(0, 80) + '</td>' +
+        '<td data-label="Budget">Rs ' + Number(o.budget || 0).toLocaleString() + '</td>' +
+        '<td data-label="Status">' + statusBadge(o.status || 'pending') + '</td></tr>'
+      ).join('') || '<tr><td colspan="5">No orders</td></tr>';
+    }
+
+    async function loadDashboard() {
+      showErr($('panelErr'), '');
+      await Promise.all([loadStats(), loadUsers(), loadOrders()]);
+    }
+
+    function switchTab(name) {
+      document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
+      document.querySelectorAll('.tab-panel').forEach((p) => p.classList.add('hidden'));
+      $('tab-' + name).classList.remove('hidden');
+    }
+
+    $('sendOtpBtn').addEventListener('click', async () => {
+      showErr($('loginErr'), '');
+      try {
+        const email = $('email').value.trim();
+        const data = await api('/auth/otp/start', { method: 'POST', body: JSON.stringify({ email }) });
+        methodId = data.method_id;
+        $('otpStep2').classList.remove('hidden');
+        showErr($('loginErr'), 'OTP sent to ' + email);
+      } catch (e) {
+        showErr($('loginErr'), e.message);
+      }
+    });
+
+    $('verifyOtpBtn').addEventListener('click', async () => {
+      showErr($('loginErr'), '');
+      try {
+        const data = await api('/auth/otp/verify', {
+          method: 'POST',
+          body: JSON.stringify({
+            method_id: methodId,
+            code: $('otpCode').value.trim(),
+            role: 'admin',
+          }),
+        });
+        if (data.role !== 'admin') throw new Error('Not an admin account');
+        token = data.access_token;
+        localStorage.setItem('vtailor_admin_token', token);
+        localStorage.setItem('vtailor_admin_id', data.user_id);
+        showApp(true);
+        await loadDashboard();
+      } catch (e) {
+        showErr($('loginErr'), e.message);
+      }
+    });
+
+    $('logoutBtn').addEventListener('click', () => {
+      token = '';
+      localStorage.removeItem('vtailor_admin_token');
+      localStorage.removeItem('vtailor_admin_id');
+      showApp(false);
+      $('otpStep2').classList.add('hidden');
+    });
+
+    document.querySelectorAll('.tab').forEach((t) => {
+      t.addEventListener('click', () => switchTab(t.dataset.tab));
+    });
+
+    $('refreshStatsBtn').addEventListener('click', () => loadStats().catch((e) => showErr($('panelErr'), e.message)));
+    $('refreshUsersBtn').addEventListener('click', () => loadUsers().catch((e) => showErr($('panelErr'), e.message)));
+    $('refreshOrdersBtn').addEventListener('click', () => loadOrders().catch((e) => showErr($('panelErr'), e.message)));
+    $('userRoleFilter').addEventListener('change', () => loadUsers().catch((e) => showErr($('panelErr'), e.message)));
+    $('orderStatusFilter').addEventListener('change', () => loadOrders().catch((e) => showErr($('panelErr'), e.message)));
+
+    if (token) {
+      showApp(true);
+      loadDashboard().catch(() => {
+        $('logoutBtn').click();
+        showErr($('loginErr'), 'Session expired — login again.');
+      });
+    }
+  </script>
+</body>
+</html>
